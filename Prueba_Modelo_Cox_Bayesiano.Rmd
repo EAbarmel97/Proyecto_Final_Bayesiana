@@ -1,0 +1,31 @@
+---
+title: "Prueba_modelo_Cox_JAGS"
+author: "Enki Alonso Barra Melendrez"
+date: '2022-05-19'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Importación de librerías
+
+```{r}
+library("KMsurv")
+data("larynx")
+str(larynx)
+```
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

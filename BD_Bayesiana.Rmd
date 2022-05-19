@@ -7,8 +7,8 @@ author:
 - Montaño Castro, David.
 date: '2022-05-17'
 output:
-  word_document: default
   pdf_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -18,7 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ## R Markdown
 Importacion de las posibles paqueterias a utilizar
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(MASS)
 library(tidyverse)
 library(datos)

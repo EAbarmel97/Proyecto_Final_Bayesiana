@@ -37,14 +37,12 @@ library(openxlsx)
 Mandamos a llamar los datos que vamos a ocupar para el modelo
 
 ```{r}
-
-tratamiento_art <- read.csv("art_sim.csv")
-informacion_basica <- read.csv("basic_sim.csv")
-seguimiento_paciente <- read.csv("follow_sim.csv")
-conteo_cd4 <- read.csv("lab_cd4_sim.csv")
-carga_viral <- read.csv("lab_rna_sim.csv")
-seguimiento_visitas <- read.csv("visit_sim.csv")
-
+tratamiento_art <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/art_sim.csv")
+informacion_basica <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/basic_sim.csv")
+seguimiento_paciente <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/follow_sim.csv")
+conteo_cd4 <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/lab_cd4_sim.csv")
+carga_viral <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/lab_rna_sim.csv")
+seguimiento_visitas <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/visit_sim.csv")
 
 ```
 
@@ -141,7 +139,7 @@ Primero veremos de que lugares tenemos datos disponibles, dichos datos se encuen
 
 # Hacemos una tabla sobre la informacion por paises 
 paises <- table(informacion_basica$site)
-# View(paises)
+ View(paises)
 
 # cambiamos los nombres de la tabla para que estos esten a corde a cada país
 names(paises)<- c("Argentina", "Brasil", "Chile", "Haiti", "Honduras", "México", "Perú")
@@ -152,7 +150,7 @@ barplot(paises, col = 9:2, main = "Poblacion inicial en el estudio por país", y
 
 # veamos que clasificaiones generamos.-
 legend("topright", legend = paises, fill = 9:2, title = "Numero de Personas", cex = .8, xpd = TRUE,
-       inset = c(.1, -.1), bty = "n", lwd = 1)
+       inset = c(.2, -.02), bty = "n", lwd = 1)
 
 
 ```

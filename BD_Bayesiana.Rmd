@@ -19,7 +19,7 @@ knitr::opts_chunk$set(echo = TRUE)
 Importacion de las posibles paqueterias a utilizar
 
 ```{r}
-
+library(MASS)
 library(tidyverse)
 library(datos)
 library(htmlwidgets)

@@ -29,7 +29,7 @@ library(gdata)
 library(dplyr)
 library(DescTools)
 library(openxlsx)
-
+library(rjags)
 ```
 
 ## Datos a utilizar
@@ -43,8 +43,10 @@ seguimiento_paciente <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs
 conteo_cd4 <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/lab_cd4_sim.csv")
 carga_viral <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/lab_rna_sim.csv")
 seguimiento_visitas <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/visit_sim.csv")
-
 ```
+
+
+
 
 ## Variables disponibles por cada archivo excel
 

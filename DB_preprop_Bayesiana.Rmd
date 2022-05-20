@@ -37,13 +37,14 @@ library(openxlsx)
 Mandamos a llamar los datos que vamos a ocupar para el modelo
 
 ```{r}
+head(table(unique(tratamiento_art)))
 #Cargamos las bases de datos 
-tratamiento_art <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/art_sim.csv")
-informacion_basica <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/basic_sim.csv")
-seguimiento_paciente <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/follow_sim.csv")
-conteo_cd4 <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/lab_cd4_sim.csv")
-carga_viral <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/lab_rna_sim.csv")
-seguimiento_visitas <- read.csv("/Users/enki/Documents/Modelo_Cox_Bayesiano/DBs/visit_sim.csv")
+tratamiento_art <- read.csv("art_sim.csv")
+informacion_basica <- read.csv("basic_sim.csv")
+seguimiento_paciente <- read.csv("follow_sim.csv")
+conteo_cd4 <- read.csv("lab_cd4_sim.csv")
+carga_viral <- read.csv("lab_rna_sim.csv")
+seguimiento_visitas <- read.csv("visit_sim.csv")
 ```
 
 ## Variables disponibles por cada archivo excel
@@ -94,6 +95,9 @@ ___
 Cambiamos las fechas para que aparezcan de una forma que nos sea facil tratarlas, i.e, cambiamos el formato en el cual aparecen y revisamos que estén en el formato actualizado
 
 ```{r}
+
+View(seguimiento_paciente)
+
 #Cambiamos el formato a tipo "Date"
 tratamiento_art$art_sd <- as.Date(tratamiento_art$art_sd, "%Y-%m-%d")
 class(tratamiento_art$art_sd)
@@ -176,6 +180,7 @@ categoria_edades <- table(informacion_basica$age_c)
 # Asignamos nombres a la tabla
 names(categoria_edades) <- c("60 años o mas", "18-24 años", "25-44 años", "45-59 años")
  
+
 # realizamos un grafico que nos permita ver los rangos de las edades
 barplot(categoria_edades, col = 4:8, main = "Poblacion inicial en el estudio por edad", ylab = "Frecuencia",
         xlab = "Rango de edades")
@@ -216,7 +221,10 @@ Datos siponibles en "tratamiento_art"
 ```{r}
 #Generamos variables dummy para separar los tipos de tratamiento disponibles.
 
+View()
+
 # tratamientos
+
 value_EFV = "EFV"
 tratamiento_art$dummy_EFV <- grepl(value_EFV, tratamiento_art$art_id, fixed = TRUE)
 value_NVP = "NVP"
@@ -233,17 +241,20 @@ value_SQV = "SQV"
 tratamiento_art$dummy_SQV <- grepl(value_SQV, tratamiento_art$art_id, fixed = T)
 value_DRV = "DRV"
 tratamiento_art$dummy_DVR <- grepl(value_DRV, tratamiento_art$art_id, fixed = T)
+
 tratamiento_art$groupIP <- ifelse(tratamiento_art$dummy_LPV | tratamiento_art$dummy_RTV | tratamiento_art$dummy_ATV | tratamiento_art$dummy_SQV | tratamiento_art$dummy_DVR, 1,0)
 
 value_DLG ="DLG"
 tratamiento_art$dummy_DLG <- grepl(value_DLG, tratamiento_art$art_id, fixed = T)
 value_RAL = "RAL"
 tratamiento_art$dummy_RAL <- grepl(value_RAL, tratamiento_art$art_id, fixed = T)
-
 tratamiento_art$groupITRAN <- ifelse(tratamiento_art$dummy_DLG == 1 | tratamiento_art$dummy_RAL == 1, 1, 0)
+
 
 tratamiento_art$group_art <- ifelse(tratamiento_art$groupNNRTI==1,1, ifelse(tratamiento_art$groupIP==1,2,
                                ifelse(tratamiento_art$groupITRAN==1,3,0)))
+
+# View(tratamiento_art)
 ```
 
 Agrupamos en los tipos de tratamiento: 
@@ -457,7 +468,7 @@ for (i in 1:length(patients)){# hice cambio
 carga_viral <- na.omit(carga_viral)
 
 #otra checadita a la tabla
-View(carga_viral)
+# View(carga_viral)
 #Ya tenemos los primeros recuentos de CV 
 
 #Procedemos a clasificar los niveles de CV
@@ -473,7 +484,7 @@ carga_viral$eliminar <- NULL
 
 ```
 
-aqui me quedé 
+
 ## Limpieza de cada tabla de forma individual. tratamiento_art_primer_medicamento
 
 Conservando el primer tratamiento al cual se somete el paciente
@@ -544,6 +555,8 @@ tratamiento_art_primer_medicamento$eliminar <-NULL
 
 Conservando el primer tratamiento al cual se somete el paciente
 
+Ejecutar esta siguiente chunk
+
 ```{r}
 #View(tratamiento_art)
 
@@ -604,6 +617,7 @@ tratamiento_art$eliminar <- NULL
 tratamiento_art_ultimo_medicamento$eliminar <-NULL 
 
 ```
+
 
 ## Limpieza de cada tabla de forma individual. Comprobacion y Merge
 

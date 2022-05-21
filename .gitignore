@@ -2,7 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
-/Users/enki/Documents/Modelo_Cox_Bayesiano/.pyenv 
+.pyenv/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

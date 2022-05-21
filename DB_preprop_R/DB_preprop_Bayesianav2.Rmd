@@ -441,9 +441,9 @@ patients <- unique(carga_viral$patient)
 
 # Con un bucle for vamos a revisar cada entrada de la variable "rna_d" para obtener la fecha minima que sera la cual nos dejara al primer conteo de CV. Tardara un poco en ejecutarse, paciencia.
 
-for (i in 1:length(patients)){
-  reg = patients[i]
-  datos_1 = carga_viral %>% filter(patient == reg) #submarco de datos obtendo por paciente
+for (i in 1:length(carga_viral$patient)) {
+  reg = carga_viral$patient[i]
+  datos_1 = carga_viral %>% filter(patient == reg)
   datos_1$eliminar <- rep(0,length(datos_1$patient))
   datos_1$eliminar = as.Date(min(datos_1$rna_d))   # Fecha de inicio del paciente que cumple las condiciones
   carga_viral$eliminar[carga_viral$patient==reg] = datos_1$eliminar                          
@@ -455,7 +455,7 @@ for (i in 1:length(patients)){
 # Ya tenemos una variable para hacer un comparativo, vamos a comparar las fechas en las que se sacaron la primer cuenta de carga viral con la variable "eliminar" de apoyo que creamos, la cual esta llena por cada paciente unico de la fecha minima.
 # vamos a comparar las fechas y si no coinciden vamos a asignar un NA para posteriormente eliminar todas las tuplas/filas con "na.omit()"
 
-for (i in 1:length(patients)){# hice cambio 
+for (i in 1:length(carga_viral$patient)){
   if (carga_viral$rna_d[i] != carga_viral$eliminar[i]) {
     carga_viral$eliminar[i] = NA
   }
@@ -472,7 +472,8 @@ carga_viral <- na.omit(carga_viral)
 #Ya tenemos los primeros recuentos de CV 
 
 #Procedemos a clasificar los niveles de CV
-carga_viral$rna_v = factor(ifelse(carga_viral$rna_v<=50, "CV indetectable", ifelse(carga_viral$rna_v<500, "CV baja", ifelse(carga_viral<40000, "CV media", "CV alta"))))
+carga_viral$rna_v <- factor(ifelse(carga_viral$rna_v<=50, "CV indetectable", 
+                                  ifelse(carga_viral$rna_v<500, "CV baja", ifelse(carga_viral<40000, "CV media", "CV alta"))))
 
 #otra checadita mas a la tabla
 #View(carga_viral)
@@ -481,7 +482,6 @@ carga_viral$rna_v = factor(ifelse(carga_viral$rna_v<=50, "CV indetectable", ifel
 carga_viral$eliminar <- NULL
 
 #Ya tenemos la tabla de datos lista
-
 ```
 
 
@@ -516,8 +516,8 @@ patients <- unique(tratamiento_art$patient)
 
 # Con un for vamos a revisar cada entrada de la variable "art_sd" para obtener la fecha minima en la cual se le asigno a un paciente su tratamiento. Tardara un poco en ejecutarse, paciencia.
 
-for (i in 1:length(patients)) { #hice cambio 
-  reg = patients[i]
+for (i in 1:length(tratamiento_art$patient)) { #hice cambio 
+  reg = tratamiento_art$patient[i]
   datos_1 = tratamiento_art %>% filter(tratamiento_art$patient==reg)
   datos_1$eliminar=NA
   datos_1$eliminar = as.Date(min(datos_1$art_sd))   ### Fecha de inicio del paciente que cumple las condiciones
@@ -531,7 +531,7 @@ for (i in 1:length(patients)) { #hice cambio
 tratamiento_art <- na.omit(tratamiento_art)
 
 # Hacemos el comparativo para generar los NA's en la variable "eliminar" y despues usar "na.omit()"
-for (i in 1:length(patients)) { #hice cambios 
+for (i in 1:length(tratamiento_art$patient)) {
   if (tratamiento_art$art_sd[i] != tratamiento_art$eliminar[i]) {
     tratamiento_art$eliminar[i] = NA
   }
@@ -585,8 +585,8 @@ patients <- unique(tratamiento_art$patient)
 
 # Con un for vamos a revisar cada entrada de la variable "art_sd" para obtener la fecha minima en la cual se le asigno a un paciente su tratamiento. 
 
-for (i in 1:length(patients)){ #hice cambios
-  reg = patients[i]
+for (i in 1:length(tratamiento_art$patient)){ #hice cambios
+  reg = tratamiento_art$patient[i]
   datos_1 = tratamiento_art %>%  filter(tratamiento_art$patient==reg)
   datos_1$eliminar=NA
   datos_1$eliminar = as.Date(max(datos_1$art_sd))   ### Fecha de inicio del paciente que cumple las condiciones

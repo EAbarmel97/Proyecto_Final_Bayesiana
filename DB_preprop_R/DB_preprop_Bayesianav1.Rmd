@@ -516,7 +516,7 @@ patients <- unique(tratamiento_art$patient)
 
 # Con un for vamos a revisar cada entrada de la variable "art_sd" para obtener la fecha minima en la cual se le asigno a un paciente su tratamiento. Tardara un poco en ejecutarse, paciencia.
 
-for (i in 1:length(patients)) { #hice cambio 
+for (i in 1:length(patients)) { 
   reg = patients[i]
   datos_1 = tratamiento_art %>% filter(tratamiento_art$patient==reg)
   datos_1$eliminar=NA
@@ -531,7 +531,7 @@ for (i in 1:length(patients)) { #hice cambio
 tratamiento_art <- na.omit(tratamiento_art)
 
 # Hacemos el comparativo para generar los NA's en la variable "eliminar" y despues usar "na.omit()"
-for (i in 1:length(patients)) { #hice cambios 
+for (i in 1:length(patients)) { 
   if (tratamiento_art$art_sd[i] != tratamiento_art$eliminar[i]) {
     tratamiento_art$eliminar[i] = NA
   }

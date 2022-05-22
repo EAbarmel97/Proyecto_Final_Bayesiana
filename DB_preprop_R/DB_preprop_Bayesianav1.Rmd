@@ -37,14 +37,14 @@ library(openxlsx)
 Mandamos a llamar los datos que vamos a ocupar para el modelo
 
 ```{r}
-head(table(unique(tratamiento_art)))
+#head(table(unique(tratamiento_art)))
 #Cargamos las bases de datos 
-tratamiento_art <- read.csv("art_sim.csv")
-informacion_basica <- read.csv("basic_sim.csv")
-seguimiento_paciente <- read.csv("follow_sim.csv")
-conteo_cd4 <- read.csv("lab_cd4_sim.csv")
-carga_viral <- read.csv("lab_rna_sim.csv")
-seguimiento_visitas <- read.csv("visit_sim.csv")
+tratamiento_art <- read.csv("../DBs/art_sim.csv")
+informacion_basica <- read.csv("../DBs/basic_sim.csv")
+seguimiento_paciente <- read.csv("../DBs/follow_sim.csv")
+conteo_cd4 <- read.csv("../DBs/lab_cd4_sim.csv")
+carga_viral <- read.csv("../DBs/lab_rna_sim.csv")
+seguimiento_visitas <- read.csv("../DBs/visit_sim.csv")
 ```
 
 ## Variables disponibles por cada archivo excel

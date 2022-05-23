@@ -1,0 +1,42 @@
+---
+title: "Primer acercamiento Cox Bayeisano"
+output:
+  pdf_document: default
+  html_document: default
+date: ''
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(rjags)
+library(coda)
+library(KMsurv)
+library(dplyr)
+library(tidyverse)
+
+data(larynx)
+
+```
+
+```{r}
+K <- 3 
+a <- seq(0, max(larynx$time) + 0.001, length.out = K + 1) #vector de tiempos de censura 
+# int.obs: vector que nos dice en que intervalo cae cada observación
+int.obs <- matrix(data = NA, nrow = nrow(larynx), ncol = length(a) - 1)
+d <- matrix(data = NA, nrow = nrow(larynx), ncol = length(a) - 1) 
+for(i in 1:nrow(larynx)){
+  for (k in 1:(length(a) - 1)){
+    d[i, k] <- ifelse(larynx$time[i] - a[k] > 0, 1, 0) * ifelse(a[k + 1] - larynx$time[i] > 0, 1, 0)
+    int.obs[i, k] <- d[i, k] * k #
+  }
+}
+(Int.obs <- rowSums(int.obs))
+```
+
+```{r}
+
+```
+

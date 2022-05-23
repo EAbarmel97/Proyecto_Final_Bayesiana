@@ -29,8 +29,8 @@ library(openxlsx)
 Segun lo panteado en "DB_preprop_Bayesianav2.Rmd"
 ```{r}
 #cargamos la base de datos
-Carga_viral <- read.csv("DBs/lab_rna_sim.csv")
-CV <- read.csv("DBs/lab_rna_sim.csv")
+Carga_viral <- read.csv("../DBs/lab_rna_sim.csv")
+CV <- read.csv("../DBs/lab_rna_sim.csv")
 #para probar el primer bucle for 
 Carga_viral_1eros_4000v1 <- Carga_viral[1:4000,]
 Carga_viral_1eros_4000v1$eliminar <- as.Date(NA)#columna de apoyo
@@ -94,9 +94,9 @@ v1 == v2 #ambos marcos de datos son iguales
 ```
 %## Una intento función que sintetiza todos los casos tratados en ambas versiones del archivo .Rmd 
 
-```{r eval=FALSE, include=FALSE}
+```{r echo=FALSE}
 CV_1ros_4000 <- Carga_viral[1:4000,]
-fun_fecha_min <- function(X,indice,valor){
+fun_fecha_min <- function(X,index,valor){
 #Definiciones globales
 indice = as.character(substitute(indice)) #indice lo volvemos cadenda de carac 
 valor  = as.character(substitute(valor)) #valor lo volvemos cadenda de carac
@@ -106,9 +106,9 @@ inds = unique(X[[indice]])#indices tomados de forma unica
 L = length(unique(X[[indice]]))
  for(i in 1:L){
    reg = inds[i]
-   datos = X %>% filter(X[[indice]] == reg)
-  datos[[eliminar]] = NA
-     X[[eliminar]] = as.Date(min(datos[[valor]]))
+   datos = X %>% filter((X[[indice]] == reg))
+   datos[[eliminar]] = NA
+   X[[eliminar]] = as.Date(min(datos[[valor]]))
    X[[eliminar]][X[[indice]] == reg] = datos[[eliminar]]
  }
  for(i in 1:L){
@@ -120,11 +120,69 @@ L = length(unique(X[[indice]]))
 }
 ```
 
-
-```{r eval=FALSE, include=FALSE}
-CV_1ros_4000_verif <- fun_fecha_min(X=CV_1ros_4000,indice=patient,valor=rna_d) 
-#CV_1ros_4000_verif == v1
+```{r}
+CV_1ros_4000 <- Carga_viral[1:4000,]
+fun_fecha_MIN <- function(X,indice,valor){
+#Definiciones globales
+indice = as.character(substitute(indice)) #indice lo volvemos cadenda de carac 
+valor  = as.character(substitute(valor)) #valor lo volvemos cadenda de carac
+eliminar = as.character(substitute(eliminar))  
+ X[eliminar] = as.Date(NA)  #columna auxiliar
+inds = unique(X[indice])#indices tomados de forma unica 
+L = length(unique(X[indice]))
+ for(i in 1:L){
+   reg = inds[i]
+   datos = X %>% filter_all(X[indice] == reg)
+  datos[eliminar] = NA
+   X[eliminar] = as.Date(min(datos[valor]))
+   X[eliminar][X[indice] == reg] = datos[eliminar]
+ }
+ for(i in 1:L){
+   if(X[eliminar][i] != datos[eliminar][i]){
+     X[eliminar][i] = NA
+   }
+ }
+ return(na.omit(X))
+}
 ```
 
 
+```{r echo=TRUE}
+CV_1ros_4000_verif <- fun_fecha_min(CV_1ros_4000,patient,rna_d) 
+#CV_1ros_4000_verif == v1
+```
+```{r}
+library(zoo)
+library(rlang)
+
+CV_1ros_4000 <- Carga_viral[1:4000,]
+fecha_min <- function(X,col_indice,col_valor){
+#Definiciones globales
+ VAL = .data[[col_valor]]
+ IND = .data[[col_indice]]
+ X["eliminar"] = as.Date(NA)  #columna auxiliar
+inds = unique(IND)#indices tomados de forma unica 
+L = length(unique(IND))
+ for(i in 1:L){
+   reg = inds[i]
+   datos = X %>% filter(IND == reg)
+   datos["eliminar"] = NA 
+   X["eliminar"] = as.Date(min(VAL))
+   X["eliminar"][IND == reg] = datos["eliminar"]
+ }
+ for(i in 1:L){
+   if(X["eliminar"][i] != datos["eliminar"][i]){
+     X["eliminar"][i] = NA
+   }
+ }
+ return(na.omit(X))
+}
+```
+
+```{r}
+library(zoo)
+library(rlang)
+V_1ros_4000_verif2 <- fecha_min(X=CV_1ros_4000,col_indice="patient",col_valor="rna_d")
+
+```
 

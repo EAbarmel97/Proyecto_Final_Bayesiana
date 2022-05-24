@@ -151,6 +151,8 @@ L = length(unique(X[indice]))
 CV_1ros_4000_verif <- fun_fecha_min(CV_1ros_4000,patient,rna_d) 
 #CV_1ros_4000_verif == v1
 ```
+
+
 ```{r}
 library(zoo)
 library(rlang)
@@ -167,7 +169,7 @@ L = length(unique(IND))
    reg = inds[i]
    datos = X %>% filter(IND == reg)
    datos["eliminar"] = NA 
-   X["eliminar"] = as.Date(min(VAL))
+   X["eliminar"] = as.Date.(min(VAL))
    X["eliminar"][IND == reg] = datos["eliminar"]
  }
  for(i in 1:L){
@@ -180,9 +182,6 @@ L = length(unique(IND))
 ```
 
 ```{r}
-library(zoo)
-library(rlang)
 V_1ros_4000_verif2 <- fecha_min(X=CV_1ros_4000,col_indice="patient",col_valor="rna_d")
-
 ```
 

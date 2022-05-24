@@ -22,21 +22,35 @@ data(larynx)
 ```
 
 ```{r}
-K <- 3 
+K <- 3 #número de intervalo que escogemos 
+time <- larynx$time #definfimos un vector con las observaciónes de la variable "time"
 a <- seq(0, max(larynx$time) + 0.001, length.out = K + 1) #vector de tiempos de censura 
 # int.obs: vector que nos dice en que intervalo cae cada observación
 int.obs <- matrix(data = NA, nrow = nrow(larynx), ncol = length(a) - 1)
 d <- matrix(data = NA, nrow = nrow(larynx), ncol = length(a) - 1) 
 for(i in 1:nrow(larynx)){
   for (k in 1:(length(a) - 1)){
-    d[i, k] <- ifelse(larynx$time[i] - a[k] > 0, 1, 0) * ifelse(a[k + 1] - larynx$time[i] > 0, 1, 0)
-    int.obs[i, k] <- d[i, k] * k #
+    d[i, k] <- ifelse(time[i] - a[k] > 0, 1, 0) * ifelse(a[k + 1] - time[i] > 0, 1, 0)#indicadora del intervalo
+    int.obs[i, k] <- d[i, k] * k #indica en que intervalo (1,2,3) cae la observación. 
   }
 }
-(Int.obs <- rowSums(int.obs))
+(Int.obs <- rowSums(int.obs)) #vector que nos indica en que intervalo cae cada observación
 ```
 
 ```{r}
+#cadena de caracteres para compilar el modelo 
+model_JAGS <-"model{
+for(i in 1:n){
+  for(j in 1:int.obs[i]){
+    cond[i,j] <- step()
+  }
+ }
+ #Truco de los ceros 
+ 
+}"
 
 ```
+
+
+
 

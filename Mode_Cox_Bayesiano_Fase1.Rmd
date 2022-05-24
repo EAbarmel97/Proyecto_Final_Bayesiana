@@ -1,0 +1,377 @@
+---
+title: "Modelo_Bayesiano_Cox"
+author: "Rafael Chavez"
+date: '2022-05-20'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Librerias
+
+Cargamos las librerias que vamos a usar para el Modelo de Cox
+
+```{r message=FALSE, warning=FALSE}
+library(gdata)
+library(DescTools)
+library(survival)
+```
+
+## Cargando las BD
+
+Vamos a usar las tablas de datos que generamos en el archivo anterior llamado "BD_preprop_Bayesiana.Rmd"
+
+```{r}
+
+primer_b <- read.csv("Primer_base.csv")
+
+segunda_b <- read.csv("Segunda_base.csv")
+
+head(primer_b)
+
+head(segunda_b)
+
+```
+___
+### DATOS DE art_sim.csv tratamiento_art
+
+patient  <-- paciente
+site     <-- lugar de donde viene
+art_id   <-- tratamiento que sigue
+art_sd   <-- fecha de inicio de tratamiento
+art_ed   <-- fecha de termino del tratamiento (si no hay fecha de término el paciente continuó con dicho tratamiento)
+art_rs   <-- razón de cambio de tratamiento
+
+### DATOS DE basic_sim.csv informacion_basica
+baseline_d       <-- fecha de enrrolamiento del paciente
+male             <-- 1 si es hombre, 0 si es mujer
+age              <-- edad del paciente
+birth_d          <-- fecha de nacimiento
+hivdiagnosis_d   <-- fecha de diagnostico
+mode             <-- modo de transmision de la enfermedad
+birth_d_a        <-- exactitud de la fecha registrada
+
+### DATOS DE follow_sim.csv seguimiento_paciente
+l_alive_d  <-- ultima fecha en la que sabemos que el paciente aun se encuentra vivo, en contacto con el sistema
+death_y    <-- registro de su muerte, 1 si murio 0 si no murio
+death_d    <-- fecha de muerte
+
+### Sobre el CD4 Y RNA(CV)
+
+Lo normal es que existan entre 500 y 1600 celulas CD4 por milimetro cubico de sangre
+rna es el numero de copias del virus por ml de sangre o por c/ml
+
+### DATOS DE lab_cd4_sim.csv conteo_cd4
+cd4_d   <-- fecha en la que se realizo el conteo de cd4
+cd4_v   <-- valor de cd4 correspondiente a su fecha en la que se realizo el conteo
+
+### DATOS DE lab_rna_sim.csv carga_viral
+rna_d       <-- fecha del conteo de la carga viral
+rna_v       <-- valor de rna correspondiente a su fecha en la que se realizo el conteo
+                si nos marca un rna_v = -40 nos informa que en ese momento era indectable
+
+###  DATOS DE visit_sim.csv 
+visit_d   <-- fechas de visita del paciente
+___
+
+
+## Primer eliminacion de variables fuera de uso
+
+Porque no les daremos uso mas adelante y ya fueron usadas en el limpieza anterior para generar los archivos.
+
+```{r}
+
+# Variables a eliminar de la primer base 
+primer_b$X <- NULL
+primer_b$visit_d <- NULL
+primer_b$birth_d <- NULL
+primer_b$birth_d_a <- NULL
+primer_b$rna_d <- NULL
+primer_b$cd4_d <- NULL
+
+# Variables a eliminar de la segunda base 
+segunda_b$X <- NULL
+segunda_b$visit_d <- NULL
+segunda_b$birth_d <- NULL
+segunda_b$birth_d_a <- NULL
+segunda_b$rna_d <- NULL
+segunda_b$cd4_d <- NULL
+
+head(primer_b)
+head(segunda_b)
+
+```
+## Fechas
+
+Transformamos las fechas a un formato "Date"
+
+```{r}
+
+# Para la base con primer tratamiento asignado a los pacientes
+primer_b$art_sd <- as.Date(primer_b$art_sd, "%Y-%m-%d")
+primer_b$l_alive_d <- as.Date(primer_b$l_alive_d, "%Y-%m-%d")
+primer_b$baseline_d <- as.Date(primer_b$baseline_d, "%Y-%m-%d")
+primer_b$death_d <- as.Date(primer_b$death_d, "%Y-%m-%d")
+
+# Para la segunda base conn ultimo tratamiento asignado a los pacientes
+segunda_b$art_sd <- as.Date(segunda_b$art_sd, "%Y-%m-%d")
+segunda_b$l_alive_d <- as.Date(segunda_b$l_alive_d, "%Y-%m-%d")
+segunda_b$baseline_d <- as.Date(segunda_b$baseline_d, "%Y-%m-%d")
+segunda_b$death_d <- as.Date(segunda_b$death_d, "%Y-%m-%d")
+
+```
+
+## Tiempo de supervivencia
+
+Vamos a calcular el tiempo de supervivencia de cada paciente dependiendo si murio o no, 
+
+-Si murio vamos a tomar el tiempo de supervivencia como art_ed - baseline_d, que es la fecha de termino del tratamiento menos la fecha en que la inicio.
+
+-Si esta vivo vamos a calcular el tiempo como l_alive_d - baseline_d, que es la ultima fecha de la que sabemos algo del paciente menos la fecha en la que incio su tratamiento.
+
+Para diferenciar estos tiempos vamos a usar la variable death_y que nos indica si el paciente esta vivo o muerto para saber que diferencia debemos aplicar.
+
+```{r}
+
+# Analicemos que variables tienen NA's
+# base1
+sum(is.na(primer_b$patient))
+sum(is.na(primer_b$site))
+sum(is.na(primer_b$art_id))
+sum(is.na(primer_b$art_sd))
+sum(is.na(primer_b$art_ed))
+sum(is.na(primer_b$group_art))
+sum(is.na(primer_b$l_alive_d))
+sum(is.na(primer_b$death_y))
+sum(is.na(primer_b$death_d))
+sum(is.na(primer_b$baseline_d))
+sum(is.na(primer_b$male))
+sum(is.na(primer_b$age))
+sum(is.na(primer_b$hivdiagnosis_d))
+sum(is.na(primer_b$mode))
+sum(is.na(primer_b$age_c))
+sum(is.na(primer_b$rna_v))
+sum(is.na(primer_b$cd4_v))
+
+#base2
+sum(is.na(segunda_b$patient))
+sum(is.na(segunda_b$site))
+sum(is.na(segunda_b$art_id))
+sum(is.na(segunda_b$art_sd))
+sum(is.na(segunda_b$art_ed))
+sum(is.na(segunda_b$group_art))
+sum(is.na(segunda_b$l_alive_d))
+sum(is.na(segunda_b$death_y))
+sum(is.na(segunda_b$death_d))
+sum(is.na(segunda_b$baseline_d))
+sum(is.na(segunda_b$male))
+sum(is.na(segunda_b$age))
+sum(is.na(segunda_b$hivdiagnosis_d))
+sum(is.na(segunda_b$mode))
+sum(is.na(segunda_b$age_c))
+sum(is.na(segunda_b$rna_v))
+sum(is.na(segunda_b$cd4_v))
+
+
+# Creamos la variable que almacenara los tiempos de supervivencia para ambas bases
+primer_b$supervivencia <- NA
+segunda_b$supervivencia <- NA
+
+# Haremos un for para que recorra cada variable y nos diga si esa vivo o muerto y despues que haga la diferencia de fechas 
+
+# Recordemos que 
+# death_y    <-- registro de su muerte 
+# 1 si murio 0 si no murio
+
+# For para la primer base
+for (i in 1:length(primer_b$death_y)) {
+  if (primer_b$death_y[i] == 1) {
+    primer_b$supervivencia[i] = primer_b$death_d[i] - primer_b$baseline_d[i]
+  }else{
+    primer_b$supervivencia[i] = primer_b$l_alive_d[i] - primer_b$baseline_d[i]
+  }
+}
+
+# For para la segunda base
+for (i in 1:length(segunda_b$death_y)) {
+  if (segunda_b$death_y[i] == 1) {
+    segunda_b$supervivencia[i] = segunda_b$death_d[i] - segunda_b$baseline_d[i]
+  }else{
+    segunda_b$supervivencia[i] = segunda_b$l_alive_d[i] - segunda_b$baseline_d[i]
+  }
+}
+
+# Comprovamos que no generamos NA's en supervivencia
+sum(is.na(primer_b$supervivencia))
+sum(is.na(segunda_b$supervivencia))
+
+# eliminamos las variables que ya no vamos a usar de cada base
+primer_b$death_d <- NULL
+segunda_b$death_d <- NULL
+
+
+# Como tenemos 179 na's por cada base para el primer tratamiento vamos a eliminarlas
+primer_b <- na.omit(primer_b)
+segunda_b <- na.omit(segunda_b)
+
+```
+
+## Poblacion que sera de interes para el estudio
+
+Se manejara una corte entre los años 2000 a los años 2018 basandonos en la fecha de cuando se enrrolo a los pacientes a su tratamiento, haremos esto para cada base, usando la variable baseline_d que nos indica la fecha en que inicio su tratamiento
+
+```{r}
+
+#Creamos la variable donde almacenaremos a los pacientes que tienen un registro de enrolamiento mayor al año 2000 para ambas bases
+primer_b$aceptable <- NA
+# 1 si entra en el estudio NA si no entra en el estudio
+
+# Primero haremos un vector del largo de los pacientes que estan dentro de la primer base
+
+for (i in 1:length(primer_b$patient)) {
+  if (Year(primer_b$baseline_d[i]) >= 2000){
+    primer_b$aceptable[i] = 1
+  }
+}
+
+# Omitimos los NA's de los pacientes que no iniciaron su tratamiento a partir del año 2000
+primer_b <- na.omit(primer_b)
+
+# Hacemos lo mismo para la segunda BD
+segunda_b$aceptable <- NA
+# 1 si entra en el estudio NA si no entra en el estudio
+
+# Primero haremos un vector del largo de los pacientes que estan dentro de la primer base
+
+for (i in 1:length(segunda_b$patient)) {
+  if (Year(segunda_b$baseline_d[i]) >= 2000){
+    segunda_b$aceptable[i] = 1
+  }
+}
+
+# Omitimos los NA's de los pacientes que no iniciaron su tratamiento a partir del año 2000
+segunda_b <- na.omit(segunda_b)
+
+# Eliminamos la variable de apoyo aceptable
+primer_b$aceptable <- NULL
+segunda_b$aceptable <- NULL
+
+```
+
+## Censuras
+
+Vamos a generar la columna de las censuras, que incluira a los que murieron y a los pacientes que tengan una supervivencia mayor a 18 años que es lo que dura el estudio, i.e, que su supervivencia sea mayor a 6570 dias sin tomar en cuenta años bisisestos
+
+```{r}
+
+# primero seleccionaremos a los pacientes que tienen mas de 6570 días de supervivencia para descartarlos, pues exceden los 18
+
+# Creamos la variable de apoyo para las censuras por la derecha para ambas bases
+primer_b$censura_der <- NA
+segunda_b$censura_der <- NA
+
+# Haremos esto tanto para la base 1 como para la base 2
+for(i in 1:length(primer_b$supervivencia)){
+  if (primer_b$supervivencia[i] > 6570){
+    primer_b$censura_der[i] = 1
+  }else{
+    primer_b$censura_der[i] = NA
+  }
+}
+# el for anterior lleno la variable de puros NA's que nos indica que nungun paciente paso mas de 18 años bajo el estudio pero no nos indica que no tenga un registro mayor al año 2018
+sum(is.na(primer_b$censura_der))
+
+# Analogo para la segunda base
+for(i in 1:length(segunda_b$supervivencia)){
+  if (segunda_b$supervivencia[i] > 6570){
+    segunda_b$censura_der[i] = 1
+  }else{
+    segunda_b$censura_der[i] = NA
+  }
+}
+# el for anterior lleno la variable de puros NA's que nos indica que nungun paciente paso mas de 18 años bajo el estudio pero no nos indica que no tenga un registro mayor al año 2018
+sum(is.na(segunda_b$censura_der))
+
+# Los pacientes que consideraremos para censurar por la derecha seran aquellos que muestren un ultima registro de actividad mayor al año 2018
+for (i in 1:length(primer_b$patient)){
+  if ( Year(primer_b$l_alive_d[i]) >= 2019){
+    primer_b$censura_der[i] = 1
+  }else{
+    primer_b$censura_der[i] = 0
+  }
+}
+
+# Analogo para la segunda base
+for (i in 1:length(segunda_b$patient)){
+  if ( Year(segunda_b$l_alive_d[i]) >= 2019){
+    segunda_b$censura_der[i] = 1
+  }else{
+    segunda_b$censura_der[i] = 0
+  }
+}
+
+# Ya que tenemos la variable censura_der y la variable death_y que nos indican censuras por la derecha y muerte o no del paciente respectivamente las vamos a juntar en una columna que sera la que usaremos como indicador en la supervivencia
+
+# Creamos la variable de apoyo para ambas DB
+primer_b$CyF <- NA
+segunda_b$CyF <- NA
+
+# Crearemos una variable de apoyo que sumara las columnas censura_der y death_y, si la suma da 0 entonces no hay ni muerte ni censura, si la suma no da 0 entonces hubo o muerte o censura o ambas
+
+primer_b$apoyo_suma <- primer_b$censura_der + primer_b$death_y
+
+# El for me marcara censuras en la variable CyF y dependiendo de fallas y censuras por la derecha debidas al tiempo del estudio
+for (i in 1:length(primer_b$patient)) {
+  if (primer_b$apoyo_suma[i] != 0){
+    primer_b$CyF[i] = 1
+  }else{
+    primer_b$CyF[i] = 0
+  }
+}
+
+
+# Analogo para la segunda base
+segunda_b$apoyo_suma <- segunda_b$censura_der + segunda_b$death_y
+
+# El for me marcara censuras en la variable CyF y dependiendo de fallas y censuras por la derecha debidas al tiempo del estudio
+for (i in 1:length(segunda_b$patient)) {
+  if (segunda_b$apoyo_suma[i] != 0){
+    segunda_b$CyF[i] = 1
+  }else{
+    segunda_b$CyF[i] = 0
+  }
+}
+
+
+# Ahora eliminamos las variables de apoyo creadas en ambas tablas
+primer_b$apoyo_suma <- NULL
+primer_b$censura_der <- NULL
+
+segunda_b$apoyo_suma <- NULL
+segunda_b$censura_der <- NULL
+
+```
+
+
+## Modelo de Cox NO BAYESIANO. Datos de supervivencia
+
+```{r}
+
+Surv(primer_b$supervivencia, primer_b$CyF)
+
+ajuste1 <- survfit(Surv(primer_b$supervivencia, primer_b$CyF) ~ 1, type = "kaplan-meier",
+                   conf.type="log-log")
+
+plot(ajuste1,mark="|",lwd=2,xlab="Semana",ylab="Supervivencia S(t)",main="Kaplan-Meier Poblacion completa", col.main="darkgreen")
+
+```
+
+## ejecucion pruena
+
+```{r}
+
+```

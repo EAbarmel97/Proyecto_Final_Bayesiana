@@ -8,14 +8,14 @@ date: ''
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
 library(rjags)
 library(coda)
 library(KMsurv)
 library(dplyr)
 library(tidyverse)
-```
-
-```{r}
 data(larynx) #importamos marco de datos
 X <- larynx #marco de datos para definir la matriz diseño 
 time <- larynx$time #definfimos un vector con las observaciónes de la variable "time"
@@ -35,7 +35,7 @@ for(i in 1:nrow(larynx)){
     int.obs[i, k] <- d[i, k] * k #indica en que intervalo (1,2,3) cae la observación. 
   }
 }
-Int.obs <- rowSums(int.obs) #vector que nos indica en que intervalo cae cada observación
+int.obs <- rowSums(int.obs) #vector que nos indica en que intervalo cae cada observación
 ```
 
 ```{r}
@@ -54,6 +54,6 @@ param.jags <-c("beta", "lambda")
 
 ```{r}
 #compilación del modelo 
-modelo_compilado <- jags.model(data = data.jags,file = "modelo_juguete.txt", inits = init.jags, n.chains = 3)
+modelo_compilado <- jags.model(data = data.jags,file = "modelo1.txt", inits = init.jags, n.chains = 3)
 ```
 

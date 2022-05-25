@@ -39,6 +39,8 @@ Carga_viral_1eros_4000v1$eliminar <- as.Date(NA)#columna de apoyo
 Carga_viral_1eros_4000v2 <- Carga_viral[1:4000,]
 Carga_viral_1eros_4000v2$eliminar <- as.Date(NA)#columna de apoyo
 
+CV_1ros_4000 <- Carga_viral[1:4000,] #segunda copia de las 1eras 4000 filas 
+
 ```
 
 ```{r}
@@ -95,7 +97,8 @@ v1 == v2 #ambos marcos de datos son iguales
 %## Una intento función que sintetiza todos los casos tratados en ambas versiones del archivo .Rmd 
 
 ```{r echo=FALSE}
-CV_1ros_4000 <- Carga_viral[1:4000,]
+#primer intento de función
+
 fun_fecha_min <- function(X,index,valor){
 #Definiciones globales
 indice = as.character(substitute(indice)) #indice lo volvemos cadenda de carac 
@@ -120,35 +123,8 @@ L = length(unique(X[[indice]]))
 }
 ```
 
-```{r}
-CV_1ros_4000 <- Carga_viral[1:4000,]
-fun_fecha_MIN <- function(X,indice,valor){
-#Definiciones globales
-indice = as.character(substitute(indice)) #indice lo volvemos cadenda de carac 
-valor  = as.character(substitute(valor)) #valor lo volvemos cadenda de carac
-eliminar = as.character(substitute(eliminar))  
- X[eliminar] = as.Date(NA)  #columna auxiliar
-inds = unique(X[indice])#indices tomados de forma unica 
-L = length(unique(X[indice]))
- for(i in 1:L){
-   reg = inds[i]
-   datos = X %>% filter_all(X[indice] == reg)
-  datos[eliminar] = NA
-   X[eliminar] = as.Date(min(datos[valor]))
-   X[eliminar][X[indice] == reg] = datos[eliminar]
- }
- for(i in 1:L){
-   if(X[eliminar][i] != datos[eliminar][i]){
-     X[eliminar][i] = NA
-   }
- }
- return(na.omit(X))
-}
-```
-
-
 ```{r echo=TRUE}
-CV_1ros_4000_verif <- fun_fecha_min(CV_1ros_4000,patient,rna_d) 
+#CV_1ros_4000_verif <- fun_fecha_min(CV_1ros_4000,patient,rna_d) 
 #CV_1ros_4000_verif == v1
 ```
 
@@ -157,7 +133,8 @@ CV_1ros_4000_verif <- fun_fecha_min(CV_1ros_4000,patient,rna_d)
 library(zoo)
 library(rlang)
 
-CV_1ros_4000 <- Carga_viral[1:4000,]
+#segundo intento de función 
+
 fecha_min <- function(X,col_indice,col_valor){
 #Definiciones globales
  VAL = .data[[col_valor]]
@@ -182,6 +159,6 @@ L = length(unique(IND))
 ```
 
 ```{r}
-V_1ros_4000_verif2 <- fecha_min(X=CV_1ros_4000,col_indice="patient",col_valor="rna_d")
+#V_1ros_4000_verif2 <- fecha_min(X=CV_1ros_4000,col_indice="patient",col_valor="rna_d")
 ```
 

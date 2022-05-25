@@ -8,22 +8,23 @@ date: ''
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r}
 library(rjags)
 library(coda)
 library(KMsurv)
 library(dplyr)
 library(tidyverse)
-
-data(larynx)
-
 ```
 
 ```{r}
-K <- 3 #número de intervalo que escogemos 
+data(larynx) #importamos marco de datos
+X <- larynx #marco de datos para definir la matriz diseño 
 time <- larynx$time #definfimos un vector con las observaciónes de la variable "time"
+```
+
+```{r}
+time <- larynx$time #definfimos un vector con las observaciónes de la variable "time"
+K <- 3 #número de intervalo que escogemos 
+X <- larynx #marco de datos 
 a <- seq(0, max(larynx$time) + 0.001, length.out = K + 1) #vector de tiempos de censura 
 # int.obs: vector que nos dice en que intervalo cae cada observación
 int.obs <- matrix(data = NA, nrow = nrow(larynx), ncol = length(a) - 1)
@@ -34,23 +35,25 @@ for(i in 1:nrow(larynx)){
     int.obs[i, k] <- d[i, k] * k #indica en que intervalo (1,2,3) cae la observación. 
   }
 }
-(Int.obs <- rowSums(int.obs)) #vector que nos indica en que intervalo cae cada observación
+Int.obs <- rowSums(int.obs) #vector que nos indica en que intervalo cae cada observación
 ```
 
 ```{r}
-#cadena de caracteres para compilar el modelo 
-model_JAGS <-"model{
-for(i in 1:n){
-  for(j in 1:int.obs[i]){
-    cond[i,j] <- step()
-  }
- }
- #Truco de los ceros 
- 
-}"
+#datos con los cuales vamos a entrenar el modelo 
+data.jags <- list(n = nrow(larynx), m=length(a)-1, delta=larynx$delta, time=larynx$time, X=X[,-1], 
+                  int.obs=int.obs, Nbetas=ncol(X)-1, zeros=rep(0,nrow(larynx)))
 
+#función para inicializar el modelo 
+init.jags <- function(){
+  list(beta = rnorm(ncol(X)-1), lambda =runif(3,0.1))
+}
+#parámetros que vamos a monitorear   
+param.jags <-c("beta", "lambda")   
 ```
 
 
-
+```{r}
+#compilación del modelo 
+modelo_compilado <- jags.model(data = data.jags,file = "modelo_juguete.txt", inits = init.jags, n.chains = 3)
+```
 

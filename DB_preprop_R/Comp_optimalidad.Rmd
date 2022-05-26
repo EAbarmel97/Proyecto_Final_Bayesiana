@@ -17,13 +17,6 @@ library(MASS)
 library(tidyverse)
 library(dplyr)
 library(datos)
-library(htmlwidgets)
-library(survival)
-library(AUC)
-library(gdata)
-library(dplyr)
-library(DescTools)
-library(openxlsx)
 ```
 
 Segun lo panteado en "DB_preprop_Bayesianav2.Rmd"
@@ -91,7 +84,6 @@ Comprobemos que en efecto ambos marcos de datos son igules
 #quitamos los datos del tipo NA
 v1 <- na.omit(Carga_viral_1eros_4000v2) 
 v2 <- na.omit(Carga_viral_1eros_4000v2)
-
 v1 == v2 #ambos marcos de datos son iguales 
 ```
 %## Una intento función que sintetiza todos los casos tratados en ambas versiones del archivo .Rmd 
@@ -129,7 +121,7 @@ L = length(unique(X[[indice]]))
 ```
 
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 library(zoo)
 library(rlang)
 

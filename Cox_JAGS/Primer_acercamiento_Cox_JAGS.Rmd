@@ -55,6 +55,7 @@ param.jags <-c("beta", "lambda")  #paramteros a monitorear
 #compilación del modelo 
 modelo_compilado <- jags.model(data = data.jags,file = "modelo_prueba1.txt", inits = init.jags, n.chains = 3)
 ```
+
 ```{r}
 update(modelo_compilado, 1000)
 res <- coda.samples(modelo_compilado,variable.names=param.jags,n.iter=50000, n.thin=10)

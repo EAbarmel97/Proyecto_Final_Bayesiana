@@ -1,0 +1,159 @@
+---
+title: "La BD del proyecto de Bayesiana"
+author:
+- Chávez Santiago, Rafael.
+- Barra Melendrez, Enki Alonso.
+- Jeshua Romero, Guadarrama.
+- Montaño Castro, David.
+date: '2022-05-17'
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Librerias
+
+Cargamos las librerias que vamos a usar para el Modelo de Cox
+
+```{r message=FALSE, warning=FALSE}
+library(gdata)
+library(DescTools)
+library(survival)
+```
+
+## Cargando las BD
+
+Cargamos la BD que generamos anteriormente
+
+```{r}
+
+b_o <- read.csv("base_oficial.csv")
+
+head(b_o)
+
+```
+___
+### DATOS DE base_oficial
+patient  <-- paciente
+site     <-- lugar de donde viene
+art_id   <-- tratamiento que sigue
+art_sd   <-- fecha de inicio de tratamiento
+art_ed   <-- fecha de termino del tratamiento (si no hay fecha de término el paciente continuó con dicho tratamiento)
+art_rs   <-- razón de cambio de tratamiento
+baseline_d       <-- fecha de enrrolamiento del paciente
+male             <-- 1 si es hombre, 0 si es mujer
+age              <-- edad del paciente
+birth_d          <-- fecha de nacimiento
+hivdiagnosis_d   <-- fecha de diagnostico
+mode             <-- modo de transmision de la enfermedad
+birth_d_a        <-- exactitud de la fecha registrada
+l_alive_d  <-- ultima fecha en la que sabemos que el paciente aun se encuentra vivo, en contacto con el sistema
+death_y    <-- registro de su muerte, 1 si murio 0 si no murio
+death_d    <-- fecha de muerte
+<!-- Lo normal es que existan entre 500 y 1600 celulas CD4 por milimetro cubico de sangre -->
+<!-- rna es el numero de copias del virus por ml de sangre o por c/ml -->
+cd4_d   <-- fecha en la que se realizo el conteo de cd4
+cd4_v   <-- valor de cd4 correspondiente a su fecha en la que se realizo el conteo
+rna_d       <-- fecha del conteo de la carga viral
+rna_v       <-- valor de rna correspondiente a su fecha en la que se realizo el conteo
+                si nos marca un rna_v = -40 nos informa que en ese momento era indectable
+visit_d   <-- fechas de visita del paciente
+___
+
+
+## Primer eliminacion de variables fuera de uso
+
+Porque no les daremos uso mas adelante y ya fueron usadas en el limpieza anterior para generar los archivos.
+
+```{r}
+
+# View(b_o)
+
+# Eliminamos indicadores innecesarios
+b_o$X.1 <- NULL
+b_o$X <- NULL
+# la fecha de enrrolamiento ya fue usada anteriormente y ya no la necesitaremos
+b_o$baseline_d <- NULL
+# el tipo de tratamiento ya fue usado para la agrupoacion asi que ya no necesitamos
+b_o$art_id <- NULL
+# ya agrupamos las cuentas de CD4 y de CV asi que por grupo las tenemos y no las usamos de forma individual
+b_o$cd4_v <- NULL
+b_o$rna_v <- NULL
+# Eliminamos las edades como continuo pues ya fueron categorizadas
+b_o$age <- NULL
+# La fecha de nacimiento es irrelevante pues ya tenemos las edades
+b_o$birth_d <- NULL
+# La fecha de diagnostico de la enfermedad no es importante pues usamos como t_0 a la fecha de enrolamiento
+b_o$hivdiagnosis_d <- NULL 
+# La precision del como fue capturada la fecha de cumpleaños tampoco es necesaria para el estudio
+b_o$birth_d_a <- NULL
+# Las fechas de cuando se tomaron las cuentas de celulas cd4, la fecha de seguimiento y la CV ya fueron usadas y no son relevantes en este momento
+b_o$visit_d <- NULL
+b_o$rna_d <- NULL
+b_o$cd4_d <- NULL  
+# las fechas de cuando inicio el tratamiento y de cuando lo termino ya fueron usadas y son irrelevantes al momento
+b_o$art_sd <- NULL
+b_o$art_ed <- NULL
+# los subgrupos de tratamiento ya fueron usados para indicar a que grupo pertenecen, en la columna "art_grupo_primer" encontramos al grupo que corresponde bajo el primer tratamiento asignado y en la columna "art_grupo_ultimo" encontramos al grupo de tratammiento al que corresponde y con el ultimo tratamiento registrado
+b_o$NNRTI_grupo <- NULL
+b_o$IP_grupo <- NULL
+b_o$ITRAN_grupo <- NULL
+# con esta variable identificavamos antiguamente al primer tratamiento asignado por grupo de tratamiento bajo principal activo
+b_o$art_grupo <- NULL
+
+# veamos las variables restantes que entran al modelo
+View(b_o)
+```
+
+## Variables con las que trabajaremos 
+patient         <-- paciente
+male            <-- 1 si es hombre, 0 si es mujer
+mode            <-- modo de transmision de la enfermedad
+death_y         <-- registro de su muerte, 1 si murio 0 si no murio --usada en datos de supervivencia-- 
+site            <-- lugar de donde viene
+supvi_dias      <-- tiempo de supervivencia de cada paciente --usada en datos de supervivencia--
+Edad_grupos     <-- grupo de edad al que pertenece
+rna_grupos      <-- grupo al que pertenece bajo su cuenta de CV
+cd4_grupos      <-- grupo al que pertenece bajo su cuenta de cd4
+## El tiempo de supervivencia de cada paciente fue calculado de la sig forma.-
+
+Para calcular el tiempo de supervivencia de cada paciente dependiendo si murio o no. 
+
+-Si murio vamos a tomar el tiempo de supervivencia como art_ed - baseline_d, que es la fecha de termino del tratamiento menos la fecha en que la inicio.
+
+-Si esta vivo vamos a calcular el tiempo como l_alive_d - baseline_d, que es la ultima fecha de la que sabemos algo del paciente menos la fecha en la que incio su tratamiento.
+
+Para diferenciar estos tiempos se uso la variable death_y que nos indica si el paciente esta vivo o muerto para saber que diferencia debió aplicarse.
+
+
+## Censuras
+Las censuras y fallas se encuentran dentro de la variable death_y (falla = 1, censura = 0)
+## Modelacion con Kaplan-Meier. Datos supervivencia
+```{r}
+# Primero generaremos la variable que contendra a los datos de supervivencia
+datos_superviv <- Surv(b_o$supvi_dias, b_o$death_y)
+```
+
+## Modelacion con Kaplan-Meier. Sin variables explivativas/covariables
+
+```{r}
+# Creamos una curva de Kaplan Meier para analizar el comportamiento de la poblacion sin COVARIABLES/VARIABLES EXPLICATIVAS
+aj1 <- survfit(datos_superviv~1, type = "kaplan-meier", conf.type="log-log")
+
+plot(aj1, mark="|", lwd=2, xlab="Día", ylab="Supervivencia S(t)", main="Kaplan-Meier Poblacion completa",
+     col.main="darkgreen")
+```
+
+## Modelacion con Kaplan-Meier. Cada covariable de forma individual
+
+```{r}
+# Creamos una curva de Kaplan Meier para analizar el comportamiento de la poblacion sin COVARIABLES/VARIABLES EXPLICATIVAS
+aj2 <- survfit(datos_superviv~factor(b_o$male), type = "kaplan-meier", conf.type="log-log")
+
+plot(aj2, mark="|", lwd=2, xlab="Día", ylab="Supervivencia S(t)", main="Kaplan-Meier Poblacion completa",
+     col.main="darkgreen")
+```

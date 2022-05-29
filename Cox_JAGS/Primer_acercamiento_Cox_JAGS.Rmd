@@ -50,7 +50,6 @@ init.jags <- function(){
 param.jags <-c("beta", "lambda")  #paramteros a monitorear
 ```
 
-
 ```{r}
 #compilación del modelo 
 modelo_compilado <- jags.model(data = data.jags,file = "modelo_prueba1.txt", inits = init.jags, n.chains = 3)

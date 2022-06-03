@@ -17,7 +17,7 @@ model{
     
     #fun de logsupervivencia
     logSurv[i] <- -H[i]*elinpred[i]
-    
+  
     #logverosimilitud (usando el truco de los ceros)
     phi[i] <- 100000 - delta[i]*logHaz[i]-logSurv[i]
     zeros[i] ~ dpois(phi[i])  

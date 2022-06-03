@@ -1,16 +1,57 @@
 ---
-title: "Primer acercamiento Cox Bayeisano"
+title: "Primer acercamiento Cox Bayesiano"
+author: " "
+date: ' '
 output:
   pdf_document: default
   html_document: default
-date: ''
+header-includes: 
+  \usepackage[spanish]{babel} 
+  \usepackage{mathtools} 
+  \usepackage{graphicx} 
+  \usepackage{xfrac} 
+  \usepackage{leading} 
+  \usepackage{geometry}
+  \usepackage{amsmath} 
+  \usepackage{amsthm}
+  \usepackage[utf8]{inputenc}
+   \usepackage{amssymb} 
+   \usepackage{tabularx} 
+   \usepackage{paralist} 
+   \usepackage{relsize} 
+   \usepackage{polynom} 
+   \usepackage{epsfig,graphicx} 
+   \usepackage{mathtools} 
+   \usepackage{parskip} 
+  \newcommand\eqdist{\stackrel{\mathclap{\normalfont\mbox{\tiny d}}}{=}}
+
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+# Analizamos breve del código expuesto en el artículo **Bayesian Survival Analysis with BUGS** de las páginas 7-9.
 
-```{r}
+Cargamos las librerías necesarias, entre ellas "KMsurv" que contiene el marco de datos "larynx". Este marco de datos contiene las variables: 
+
+\begin{itemize}
+\item Stage (categórica de 4 niveles, 1-4)
+\\
+\item Age (de tipo entero)
+\\
+\item Time (continua)
+\\
+\item Diagyr (de tipo entero)
+\\
+\item Delta(binaria, 0-1. Nos indica si hay censura/falla, la censura es 1)
+\end{itemize}
+
+Recordemos que en el modelo de Cox no se considera el intersecto así, las covariables que se asocian a la parte de la región lineal serán 6. A saber estas son, los estapas 2-3 de la enfermedad (Stage) y  las covariables asociadas a la edad (Age) y 
+el año de dignóstico de cancer de laringe(Diagyr).
+
+Es decir, para el modelo de Cox concideramos una regresión (que después ligamos a una exponencial) del tipo $\beta_2 I_{ \text{stage = 2}} + \beta_3 I_{\text{ stage = 3}} + \beta_3 I_{ \text{ stage = 3}} + \beta_4 \text{Age} + \beta_5 \text{Diagyr}$
+
+```{r message=FALSE, warning=FALSE}
 library(rjags)
 library(coda)
 library(KMsurv)
@@ -21,42 +62,128 @@ X <- larynx #marco de datos para definir la matriz diseño
 time <- larynx$time #definfimos un vector con las observaciónes de la variable "time"
 ```
 
+Construimos una sucesión aritmética para definir una partición de la recta en la que caen las observaciones. Escogemos clasificar las observaciones del timpo de supervivencia en $K=3$ itervalos. Para ello se construye una matriz auxiliar $D=\left [ I_{(a_{k-1},a_k ]}(t_i) \right]_{i,k}$ que nos indica si la 
+observación i del tiempo de supervivencia cae en el k-ésimo intervalo. Usamos después esta matriz para contruir un vector que los indica en que intervalo cae la obsrvación i-ésima del tiempo de supervivencia $t$.
+
+\bigskip 
+
 ```{r}
 time <- larynx$time #definfimos un vector con las observaciónes de la variable "time"
 K <- 3 #número de intervalo que escogemos 
 X <- larynx #marco de datos 
 a <- seq(0, max(larynx$time) + 0.001, length.out = K + 1) #vector de tiempos de censura 
 int.obs <- matrix(data = NA, nrow = nrow(larynx), ncol = length(a) - 1)
-d <- matrix(data = NA, nrow = nrow(larynx), ncol = length(a) - 1) 
+D <- matrix(data = NA, nrow = nrow(larynx), ncol = length(a) - 1) 
 for(i in 1:nrow(larynx)){
   for (k in 1:(length(a) - 1)){
-    d[i, k] <- ifelse(time[i] - a[k] > 0, 1, 0) * ifelse(a[k + 1] - time[i] > 0, 1, 0)#indicadora del intervalo
-    int.obs[i, k] <- d[i, k] * k #indica en que intervalo (1,2,3) cae la observación. 
+    D[i, k] <- ifelse(time[i] - a[k] > 0, 1, 0) * ifelse(a[k + 1] - time[i] > 0, 1, 0)#indicadora del intervalo
+    int.obs[i, k] <- D[i, k] * k #indica en que intervalo (1,2,3) cae la observación. 
   }
 }
 int.obs <- rowSums(int.obs) #vector que nos indica en que intervalo cae cada observación
 ```
 
+Declaramos los hiperparámetros e inciamos la simulación de las ditribuciones a posteriori con valores simulados.
+
 ```{r}
 #datos con los cuales vamos a entrenar el modelo 
-data.jags <- list(n = nrow(larynx), m=length(a)-1,a = a, delta=larynx$delta, time=larynx$time, X=X[,-1], 
+data.jags <- list(n = nrow(larynx), m=length(a)-1, a = a, 
+                  delta=larynx$delta, time=larynx$time, X=X[,-1], 
                   int.obs=int.obs, Nbetas=ncol(X)-1, zeros=rep(0,nrow(larynx)))
 
 #función para inicializar el modelo 
-init.jags <- function(){
-  list(beta = rnorm(ncol(X)-1), lambda =runif(3,0.1))
-}
+init.jags <- function(){list(beta = rnorm(ncol(X)-1), lambda =runif(3,0.1))}
 #parámetros que vamos a monitorear   
 param.jags <-c("beta", "lambda")  #paramteros a monitorear
 ```
+## Sobre el código implementado en BUGS  
+
+Sean $\pmb{\beta} = (\beta_1, \ldots, \beta_n), \ \pmb{x} = (x, \ldots, x_n)$. El modelo de regresión de Cox semiparamétrico considera que:
+
+\begin{itemize}
+\item $h(t_i|\theta) = (\sum^{K}_{m=1} \lambda_m I_{(a_{m-1},a_m ]}(t_i)) e^{\pmb{\beta}^T\pmb{x}}$
+\\
+\item $L(\theta|\pmb{x}) = \prod_{m}  h(t_i|\theta)^{\delta_m} S(t_i |\theta)$
+\end{itemize}
+
+La siguinte cadena de caracteres nos muestra el contenido del archivo .txt con la descripción del modelo. Analicemos este pedazo de código:
+
+\medskip
+
+```{r}
+descrip_txt <-"model{
+  for(i in 1:n){
+    for(k in 1:int.obs[i]){
+      cond[i,k] <- step(time[i] - a[k+1])
+      HH[i,k] <- cond[i,k]*(a[k+1]-a[k])*lambda[k] + 
+                  (1-cond[i,k])*(time[i]-a[k])*lambda[k]
+    }
+    #fun de riesgo base acumulado
+    H[i] <- sum(HH[i,1:int.obs[i]])
+  }
+  for(i in 1:n){
+    #predictor lineal
+    elinpred[i] <- exp(inprod(beta[],X[i,]))
+    
+    #fun de logriesgo
+    logHaz[i] <- log(lambda[int.obs[i]]*elinpred[i])
+    
+    #fun de logsupervivencia
+    logSurv[i] <- -H[i]*elinpred[i]
+  
+    #logverosimilitud (usando el truco de los ceros)
+    phi[i] <- 100000 - delta[i]*logHaz[i]-logSurv[i]
+    zeros[i] ~ dpois(phi[i])  
+  }
+  #priors lambda y beta 
+  for(l in 1:Nbetas){beta[l] ~ dnorm(0,0.001)}
+  for(r in 1:m){lambda[r] ~ dgamma(0.01,0.01)}
+}"
+```
+
+## Compilado del modelo e inferencia. 
 
 ```{r}
 #compilación del modelo 
-modelo_compilado <- jags.model(data = data.jags,file = "modelo_prueba1.txt", inits = init.jags, n.chains = 3)
+Modelo_compilado <- jags.model(data = data.jags,file = "modelo_prueba1.txt", 
+                                                inits = init.jags, n.chains = 3)
 ```
 
 ```{r}
-update(modelo_compilado, 1000)
-res <- coda.samples(modelo_compilado,variable.names=param.jags,n.iter=50000, n.thin=10)
+#Mandamos llamar coda para tomar muestras para dist a posteriori 
+update(Modelo_compilado, 1000)
+res <- coda.samples(Modelo_compilado,variable.names=param.jags,n.iter=50000, n.thin=10)
+```
+
+```{r}
+#unimos las 3 cadenas MCMC para hacer inferencia sobre los resultados de la simulación de 
+#las dist posteriores 
+results <- as.mcmc(do.call(rbind,res))
+```
+
+```{r eval=FALSE, include=FALSE}
+#Asigamos a las entradas del vector results los respectivos hiperparámetros 
+
+#Para la region lineal:
+beta2 <- results[,1]; beta3 <- results[,2]; beta4 <- results[,3]
+beta5 <- results[,4]; beta6 <- results[,5]
+
+#Para los hiperparámetros de la fun de riesgo base:
+lambda1 <- results[,6]; lambda2 <- results[,7]; lambda3 <- results[,8]
+```
+
+Graficamos las trazas de las simulaciones para los hiperparámetros
+
+```{r}
+#Trazas 
+par(mfrow=c(2,4))
+traceplot(results)
+```
+
+Obtenemos información sobre las distribuciones a posteriori 
+
+```{r}
+#Info sobre dist posteriores
+summary(results)
 ```
 

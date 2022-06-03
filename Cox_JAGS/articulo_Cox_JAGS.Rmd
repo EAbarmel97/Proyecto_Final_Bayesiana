@@ -51,15 +51,21 @@ el año de dignóstico de cancer de laringe(Diagyr).
 
 Es decir, para el modelo de Cox concideramos una regresión (que después ligamos a una exponencial) del tipo $\beta_2 I_{ \text{stage = 2}} + \beta_3 I_{\text{ stage = 3}} + \beta_3 I_{ \text{ stage = 3}} + \beta_4 \text{Age} + \beta_5 \text{Diagyr}$
 
-```{r message=FALSE, warning=FALSE}
+```{r echo=TRUE, message=FALSE, warning=FALSE}
 library(rjags)
 library(coda)
 library(KMsurv)
-library(dplyr)
-library(tidyverse)
-data(larynx) #importamos marco de datos
-X <- larynx #marco de datos para definir la matriz diseño 
+
+
+data(larynx) #importamos marco de datos larynx 
 time <- larynx$time #definfimos un vector con las observaciónes de la variable "time"
+
+#cargamos la base larynx(sin la columna de obs de las censuras) con one-hot-enconding 
+feat_DB <- read_csv("../Cox_JAGS/larynx_hot_enc.csv", show_col_types = FALSE)
+
+#convertimos a matriz y quitamos la primera columna (las obs del tiempo
+#de supervivencia)
+X <- as.matrix(feat_DB)[,-1]
 ```
 
 Construimos una sucesión aritmética para definir una partición de la recta en la que caen las observaciones. Escogemos clasificar las observaciones del timpo de supervivencia en $K=3$ itervalos. Para ello se construye una matriz auxiliar $D=\left [ I_{(a_{k-1},a_k ]}(t_i) \right]_{i,k}$ que nos indica si la 
@@ -86,7 +92,7 @@ int.obs <- rowSums(int.obs) #vector que nos indica en que intervalo cae cada obs
 Declaramos los hiperparámetros e inciamos la simulación de las ditribuciones a posteriori con valores simulados.
 
 ```{r}
-#datos con los cuales vamos a entrenar el modelo 
+#datos con los cuales vamos a entrenar el modelo
 data.jags <- list(n = nrow(larynx), m=length(a)-1, a = a, 
                   delta=larynx$delta, time=larynx$time, X=X[,-1], 
                   int.obs=int.obs, Nbetas=ncol(X)-1, zeros=rep(0,nrow(larynx)))
@@ -101,10 +107,12 @@ param.jags <-c("beta", "lambda")  #paramteros a monitorear
 Sean $\pmb{\beta} = (\beta_1, \ldots, \beta_n), \ \pmb{x} = (x, \ldots, x_n)$. El modelo de regresión de Cox semiparamétrico considera que:
 
 \begin{itemize}
-\item $h(t_i|\theta) = (\sum^{K}_{m=1} \lambda_m I_{(a_{m-1},a_m ]}(t_i)) e^{\pmb{\beta}^T\pmb{x}}$
+\item $h(t_i|\theta) = \displaystyle (\sum^{K}_{m=1} \lambda_m I_{(a_{m-1},a_m ]}(t_i)) \ e^{\pmb{\beta}^T\pmb{x}}$
 \\
-\item $L(\theta|\pmb{x}) = \prod_{m}  h(t_i|\theta)^{\delta_m} S(t_i |\theta)$
+\item $L(\theta|\pmb{x}) = \displaystyle \prod_{m}  h(t_i|\theta)^{\delta_m} \ S(t_i |\theta)$
 \end{itemize}
+
+De la primera relación se sigue que $a$
 
 La siguinte cadena de caracteres nos muestra el contenido del archivo .txt con la descripción del modelo. Analicemos este pedazo de código:
 
@@ -161,7 +169,7 @@ res <- coda.samples(Modelo_compilado,variable.names=param.jags,n.iter=50000, n.t
 results <- as.mcmc(do.call(rbind,res))
 ```
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 #Asigamos a las entradas del vector results los respectivos hiperparámetros 
 
 #Para la region lineal:
@@ -183,7 +191,7 @@ traceplot(results)
 Obtenemos información sobre las distribuciones a posteriori 
 
 ```{r}
-#Info sobre dist posteriores
+#Info sobre las dist posteriores
 summary(results)
 ```
 

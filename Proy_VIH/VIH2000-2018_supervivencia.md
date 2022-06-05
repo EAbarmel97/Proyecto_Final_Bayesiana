@@ -1,4 +1,4 @@
-## Archivos .tex del proyecto "Supervivencia en paciente con VIH dentro de América Latina y El
+## Archivos .tex del proyecto "Supervivencia de pacientes con VIH en América Latina y El
 
 ##Caribe entre los años 2000 y 2018"
 

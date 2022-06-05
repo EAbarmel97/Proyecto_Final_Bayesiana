@@ -1,0 +1,519 @@
+---
+title: "La BD del proyecto de Bayesiana"
+author:
+- Chávez Santiago, Rafael.
+- Barra Melendrez, Enki Alonso.
+- Jeshua Romero, Guadarrama.
+- Montaño Castro, David.
+date: '2022-05-17'
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Librerias
+
+Cargamos las librerias que vamos a usar para el Modelo de Cox
+
+```{r message=FALSE, warning=FALSE}
+library(gdata)
+library(DescTools)
+library(survival)
+```
+
+## Cargando las BD
+
+Cargamos la BD que generamos anteriormente
+
+```{r}
+
+b_o <- read.csv("../DB_preprop_R/base_oficial.csv")
+
+```
+___
+### DATOS DE base_oficial
+patient  <-- paciente
+site     <-- lugar de donde viene
+art_id   <-- tratamiento que sigue
+art_sd   <-- fecha de inicio de tratamiento
+art_ed   <-- fecha de termino del tratamiento (si no hay fecha de término el paciente continuó con dicho tratamiento)
+art_rs   <-- razón de cambio de tratamiento
+baseline_d       <-- fecha de enrrolamiento del paciente
+male             <-- 1 si es hombre, 0 si es mujer
+age              <-- edad del paciente
+birth_d          <-- fecha de nacimiento
+hivdiagnosis_d   <-- fecha de diagnostico
+mode             <-- modo de transmision de la enfermedad
+birth_d_a        <-- exactitud de la fecha registrada
+l_alive_d  <-- ultima fecha en la que sabemos que el paciente aun se encuentra vivo, en contacto con el sistema
+death_y    <-- registro de su muerte, 1 si murio 0 si no murio
+death_d    <-- fecha de muerte
+<!-- Lo normal es que existan entre 500 y 1600 celulas CD4 por milimetro cubico de sangre -->
+<!-- rna es el numero de copias del virus por ml de sangre o por c/ml -->
+cd4_d   <-- fecha en la que se realizo el conteo de cd4
+cd4_v   <-- valor de cd4 correspondiente a su fecha en la que se realizo el conteo
+rna_d       <-- fecha del conteo de la carga viral
+rna_v       <-- valor de rna correspondiente a su fecha en la que se realizo el conteo
+                si nos marca un rna_v = -40 nos informa que en ese momento era indectable
+visit_d   <-- fechas de visita del paciente
+___
+
+
+## Primer eliminacion de variables fuera de uso
+
+Porque no les daremos uso mas adelante y ya fueron usadas en el limpieza anterior para generar los archivos.
+
+```{r}
+
+# View(b_o)
+
+# Eliminamos indicadores innecesarios
+b_o$X.1 <- NULL
+b_o$X <- NULL
+# la fecha de enrrolamiento ya fue usada anteriormente y ya no la necesitaremos
+b_o$baseline_d <- NULL
+# el tipo de tratamiento ya fue usado para la agrupoacion asi que ya no necesitamos
+b_o$art_id <- NULL
+# ya agrupamos las cuentas de CD4 y de CV asi que por grupo las tenemos y no las usamos de forma individual
+b_o$cd4_v <- NULL
+b_o$rna_v <- NULL
+# Eliminamos las edades como continuo pues ya fueron categorizadas
+b_o$age <- NULL
+# La fecha de nacimiento es irrelevante pues ya tenemos las edades
+b_o$birth_d <- NULL
+# La fecha de diagnostico de la enfermedad no es importante pues usamos como t_0 a la fecha de enrolamiento
+b_o$hivdiagnosis_d <- NULL 
+# La precision del como fue capturada la fecha de cumpleaños tampoco es necesaria para el estudio
+b_o$birth_d_a <- NULL
+# Las fechas de cuando se tomaron las cuentas de celulas cd4, la fecha de seguimiento y la CV ya fueron usadas y no son relevantes en este momento
+b_o$visit_d <- NULL
+b_o$rna_d <- NULL
+b_o$cd4_d <- NULL  
+# las fechas de cuando inicio el tratamiento y de cuando lo termino ya fueron usadas y son irrelevantes al momento
+b_o$art_sd <- NULL
+b_o$art_ed <- NULL
+# los subgrupos de tratamiento ya fueron usados para indicar a que grupo pertenecen, en la columna "art_grupo_primer" encontramos al grupo que corresponde bajo el primer tratamiento asignado y en la columna "art_grupo_ultimo" encontramos al grupo de tratammiento al que corresponde y con el ultimo tratamiento registrado
+b_o$NNRTI_grupo <- NULL
+b_o$IP_grupo <- NULL
+b_o$ITRAN_grupo <- NULL
+# con esta variable identificavamos antiguamente al primer tratamiento asignado por grupo de tratamiento bajo principal activo
+b_o$art_grupo <- NULL
+
+# veamos las variables restantes que entran al modelo
+# View(b_o)
+```
+
+## Variables con las que trabajaremos 
+patient         <-- paciente
+male            <-- 1 si es hombre, 0 si es mujer
+mode            <-- modo de transmision de la enfermedad
+death_y         <-- registro de su muerte, 1 si murio 0 si no murio --usada en datos de supervivencia-- 
+site            <-- lugar de donde viene
+supvi_dias      <-- tiempo de supervivencia de cada paciente --usada en datos de supervivencia--
+Edad_grupos     <-- grupo de edad al que pertenece
+rna_grupos      <-- grupo al que pertenece bajo su cuenta de CV
+cd4_grupos      <-- grupo al que pertenece bajo su cuenta de cd4
+## El tiempo de supervivencia de cada paciente fue calculado de la sig forma.-
+
+Para calcular el tiempo de supervivencia de cada paciente dependiendo si murio o no. 
+
+-Si murio vamos a tomar el tiempo de supervivencia como art_ed - baseline_d, que es la fecha de termino del tratamiento menos la fecha en que la inicio.
+
+-Si esta vivo vamos a calcular el tiempo como l_alive_d - baseline_d, que es la ultima fecha de la que sabemos algo del paciente menos la fecha en la que incio su tratamiento.
+
+Para diferenciar estos tiempos se uso la variable death_y que nos indica si el paciente esta vivo o muerto para saber que diferencia debió aplicarse.
+
+
+## Censuras
+Las censuras y fallas se encuentran dentro de la variable death_y (falla = 1, censura = 0)
+## Modelacion con Kaplan-Meier. Datos supervivencia
+```{r}
+# Primero generaremos la variable que contendra a los datos de supervivencia
+datos_superviv <- Surv(b_o$supvi_dias, b_o$death_y)
+```
+
+## Modelacion con Kaplan-Meier. Sin variables explivativas/covariables 0
+
+No tomaremos a ninguna covariable para esta parte pues hacemos un analisis general de la poblacion
+
+```{r}
+# Se importan los paquetes necesarios para la construcción de gráficas.
+
+library(survminer)
+library(tidyverse)
+library(ggfortify)
+library(survival)
+library(ggforce)
+library(ggplot2)
+```
+
+```{r}
+# Se crea una curva de Kaplan-Meier.
+# El objetivo es analizar el comportamiento de la población:
+# - Sin covariables explicativas.
+# - Sin variables explicativas.
+
+primer_modelo <- survfit(datos_superviv ~ 1, 
+                         type = "kaplan-meier", 
+                         conf.type = "log-log")
+
+autoplot(primer_modelo, 
+         censor = TRUE,
+         censor.size = 2.8,
+         censor.alpha = 0.8,
+         censor.shape = "*") + 
+  labs(x = "\n Tiempo de supervivencia (días)", 
+       y = "Probabilidades de supervivencia S(t) \n", 
+       title = "Tiempos de supervivencia \n  
+       (Kaplan-Meier para la población completa de pacientes) \n") + 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.title.x = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        axis.title.y = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        legend.title = element_text(face = "bold",
+                                    size = 10)) + 
+  facet_zoom(xlim = c(4000, 6300))
+```
+
+## Modelacion con Kaplan-Meier. Cada covariable de forma individual 1(edades)
+
+Primero analizaremos los grupos de edades.
+Se observa que debido a que se solapan las curvas generadas para cada subnivel de la variable edad se interpreta que no hay una diferencia sustancial en la sobrevida de los pacientes dependiendo de la edad en los primeros 5000 días pero al final se muestra que los adultos jovenes tienen una menor supervivencia que los tres grupos restantes
+
+```{r}
+# Se crea una curva de Kaplan-Meier
+
+male_data <- filter(b_o, male == 1)
+
+male_data$Edad_grupos <- gsub(" aÃ±os", "", male_data$Edad_grupos)
+male_data$Edad_grupos <- gsub("o mÃ¡s", "+", male_data$Edad_grupos)
+
+datos_superviv <- Surv(male_data$supvi_dias, male_data$death_y)
+
+segundo_modelo <- survfit(datos_superviv ~ Edad_grupos, 
+                          type = "kaplan-meier", 
+                          conf.type = "log-log",
+                          data = male_data)
+
+autoplot(segundo_modelo,
+         surv.linetype = 'dashed', 
+         conf.int = TRUE,
+         conf.int.linetype = "none",
+         conf.int.alpha = 0.2,
+         censor = FALSE,
+         censor.size = 2.8,
+         censor.alpha = 0.8,
+         censor.shape = "*") +
+  labs(x = "\n Tiempo de supervivencia (días)", 
+       y = "Probabilidades de supervivencia S(t) \n", 
+       title = "Tiempos de supervivencia \n  
+       (Kaplan-Meier para grupos de edad) \n") + 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.title.x = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        axis.title.y = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        legend.title = element_text(face = "bold",
+                                    size = 10))
+```
+
+## Modelacion con Kaplan-Meier. Cada covariable de forma individual 2(modo transmicion)
+
+La forma de transmicion de la enfermedad para cada forma de contagio no representa una significancia significativa en la supervivencia
+```{r}
+# Se crea una curva de Kaplan-Meier
+
+b_o$mode <- gsub('Generic Sexual', 
+                 'Generic sexual', 
+                 b_o$mode)
+b_o$mode <- gsub('Heterosexual contact and Injecting drug user', 
+                 'Heterosexual contact and injecting drug user', 
+                 b_o$mode)
+b_o$mode <- gsub('Homo/Bisexual and Injecting drug user', 
+                 'Homo/Bisexual and injecting drug user', 
+                 b_o$mode)
+b_o$mode <- gsub('specify in mode_oth', 
+                 '', 
+                 b_o$mode)
+
+datos_superviv <- Surv(b_o$supvi_dias, b_o$death_y)
+
+tercer_modelo <- survfit(datos_superviv ~ mode, 
+                          type = "kaplan-meier", 
+                          conf.type = "log-log",
+                          data = b_o)
+
+autoplot(tercer_modelo,
+         surv.linetype = 'dashed', 
+         conf.int = TRUE,
+         conf.int.linetype = "none",
+         conf.int.alpha = 0.2,
+         censor = FALSE,
+         censor.size = 2.8,
+         censor.alpha = 0.8,
+         censor.shape = "*") +
+  labs(x = "\n Tiempo de supervivencia (días)", 
+       y = "Probabilidades de supervivencia S(t) \n", 
+       title = "Tiempos de supervivencia \n  
+       (Kaplan-Meier para contagio de la enfermedad) \n") + 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.title.x = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        axis.title.y = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        legend.title = element_text(face = "bold",
+                                    size = 10))
+```
+
+## Modelacion con Kaplan-Meier. Cada covariable de forma individual 3(sitio)
+
+Durante los primeros 4500 días del estudio cada pais tienen una supervivencia similar pero antes de cumplir los 5000 días tenemos un  declive en la supervivencia de los chilenos que podria indicar falta de datos al final del periodo o menos suervivencia de la poblacion de este pais
+
+```{r}
+# Se crea una curva de Kaplan-Meier
+
+b_o$site <- gsub('argentina', 'Argentina', b_o$site)
+b_o$site <- gsub('brazil', 'Brasil', b_o$site)
+b_o$site <- gsub('chile', 'Chile', b_o$site)
+b_o$site <- gsub('honduras', 'Honduras', b_o$site)
+b_o$site <- gsub('mexico', 'México', b_o$site)
+b_o$site <- gsub('peru', 'Perú', b_o$site)
+
+datos_superviv <- Surv(b_o$supvi_dias, b_o$death_y)
+
+cuarto_modelo <- survfit(datos_superviv ~ b_o$site, 
+                          type = "kaplan-meier", 
+                          conf.type = "log-log",
+                          data = b_o)
+
+autoplot(cuarto_modelo,
+         surv.linetype = 'dashed', 
+         conf.int = TRUE,
+         conf.int.linetype = "none",
+         conf.int.alpha = 0.2,
+         censor = FALSE,
+         censor.size = 2.8,
+         censor.alpha = 0.8,
+         censor.shape = "*") +
+  labs(x = "\n Tiempo de supervivencia (días)", 
+       y = "Probabilidades de supervivencia S(t) \n", 
+       title = "Tiempos de supervivencia \n  
+       (Kaplan-Meier para lugar de origen) \n") + 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.title.x = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        axis.title.y = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        legend.title = element_text(face = "bold",
+                                    size = 10))
+```
+
+## Modelacion con Kaplan-Meier. Cada covariable de forma individual 4(CV)
+
+Las cargas virales parecen tener un comportamiento similar en la supervivencia de cada nivel, pero a partir del día 4000 tenemos una brecha que separa las curvas, puede ser que los grupos de la poblacion disminuyan o que la supervivencia de cada nivel decaiga y se notaa que la supervivencia decae para los individuos que empezaron con una CV baja. Lo que puede haber ocurrido es que como iniciaron "sanos" no le dieron la correcta atencion al virus permitiendo que este se replicara
+
+```{r}
+# Se crea una curva de Kaplan-Meier
+
+b_o$rna_grupos <- gsub('CV alta', 'Carga viral alta', 
+                       b_o$rna_grupos)
+b_o$rna_grupos <- gsub('CV media', 'Carga viral media', 
+                       b_o$rna_grupos)
+b_o$rna_grupos <- gsub('CV baja', 'Carga viral baja', 
+                       b_o$rna_grupos)
+b_o$rna_grupos <- gsub('CV indetectable', 'Carga viral indetectable', 
+                       b_o$rna_grupos)
+
+datos_superviv <- Surv(b_o$supvi_dias, b_o$death_y)
+
+quinto_modelo <- survfit(datos_superviv ~ b_o$rna_grupos, 
+                          type = "kaplan-meier", 
+                          conf.type = "log-log",
+                          data = b_o)
+
+autoplot(quinto_modelo,
+         surv.linetype = 'dashed', 
+         conf.int = TRUE,
+         conf.int.linetype = "none",
+         conf.int.alpha = 0.2,
+         censor = FALSE,
+         censor.size = 2.8,
+         censor.alpha = 0.8,
+         censor.shape = "*") +
+  labs(x = "\n Tiempo de supervivencia (días)", 
+       y = "Probabilidades de supervivencia S(t) \n", 
+       title = "Tiempos de supervivencia \n  
+       (Kaplan-Meier para primer recuento de RNA del virus) \n") + 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.title.x = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        axis.title.y = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        legend.title = element_text(face = "bold",
+                                    size = 10))
+```
+
+## Modelacion con Kaplan-Meier. Cada covariable de forma individual 5(CD4)
+
+Dentro de los primeros 4500 días aproximadamente tenemos usa supervivencia similar en cada grupo del recuento de celulas cd4, pero pasando los 4500 días tenemos una caida en la supervivencia de la poblacion que inicio con una cuenta alta de cd4 >350, esto puede ser ocacionado debido a que llegaron con un mejor nivel de salud que los demas y no dieron adecuado seguimiento a su tratamiento provocando que sus cuentas de cd4 disminuyeran o a el bajo mivel de pacientes que llegaron al final de la cohorte
+
+```{r}
+# Se crea una curva de Kaplan-Meier
+
+b_o$cd4_grupos <- gsub('CD4 inicial < 200', 
+                       'Celulas por ml^3 de sangre < 200', 
+                       b_o$cd4_grupos)
+b_o$cd4_grupos <- gsub('CD4 inicial > 350', 
+                       'Celulas por ml^3 de sangre > 350', 
+                       b_o$cd4_grupos)
+b_o$cd4_grupos <- gsub('CD4 inicial 200 - 350', 
+                       'Celulas por ml^3 de sangre 200-350', 
+                       b_o$cd4_grupos)
+
+datos_superviv <- Surv(b_o$supvi_dias, b_o$death_y)
+
+sexto_modelo <- survfit(datos_superviv ~ b_o$cd4_grupos, 
+                          type = "kaplan-meier", 
+                          conf.type = "log-log",
+                          data = b_o)
+
+autoplot(sexto_modelo,
+         surv.linetype = 'dashed', 
+         conf.int = TRUE,
+         conf.int.linetype = "none",
+         conf.int.alpha = 0.2,
+         censor = FALSE,
+         censor.size = 2.8,
+         censor.alpha = 0.8,
+         censor.shape = "*") +
+  labs(x = "\n Tiempo de supervivencia (días)", 
+       y = "Probabilidades de supervivencia S(t) \n", 
+       title = "Tiempos de supervivencia \n  
+       (Kaplan-Meier para primer primer recuento de celulas CD4) \n") + 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.title.x = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        axis.title.y = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        legend.title = element_text(face = "bold",
+                                    size = 10))
+```
+
+## Modelacion con Kaplan-Meier. Cada covariable de forma individual 6(primer trat asignado)
+
+Los tratamientos con los que inciaron los pacientes poseen una supervivencia similar durante el periodo del estudio
+
+```{r}
+# Se crea una curva de Kaplan-Meier
+
+b_o$art_grupo_primer <- gsub('0', 
+                             'Grupo tratamiento NNRTI', 
+                             b_o$art_grupo_primer)
+b_o$art_grupo_primer <- gsub('1', 
+                             'Grupo tratamiento IP', 
+                             b_o$art_grupo_primer)
+b_o$art_grupo_primer <- gsub('2', 
+                             'Grupo tratamiento ITRAN', 
+                             b_o$art_grupo_primer)
+b_o$art_grupo_primer <- gsub('3', 
+                             'Grupo tratamiento COMBINADO', 
+                             b_o$art_grupo_primer)
+
+datos_superviv <- Surv(b_o$supvi_dias, b_o$death_y)
+
+septimo_modelo <- survfit(datos_superviv ~ b_o$art_grupo_primer, 
+                          type = "kaplan-meier", 
+                          conf.type = "log-log",
+                          data = b_o)
+
+autoplot(septimo_modelo,
+         surv.linetype = 'dashed', 
+         conf.int = TRUE,
+         conf.int.linetype = "none",
+         conf.int.alpha = 0.2,
+         censor = FALSE,
+         censor.size = 2.8,
+         censor.alpha = 0.8,
+         censor.shape = "*") +
+  labs(x = "\n Tiempo de supervivencia (días)", 
+       y = "Probabilidades de supervivencia S(t) \n", 
+       title = "Tiempos de supervivencia \n  
+       (Kaplan-Meier para tratamiento por tercer activo) \n") + 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.title.x = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        axis.title.y = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        legend.title = element_text(face = "bold",
+                                    size = 10))
+```
+
+## Modelacion con Kaplan-Meier. Cada covariable de forma individual 7(ultimo trat asignado)
+
+En comparacion con los tratamientos con los que inician los pacientes conforme evolucionan estos fueron cambiados de tratamientos por diversas razones, como toxcicidad o falta se seguimiento, lo que nos hace notar una pequña pero relativa diferencia en la supervivencia de los pacientes
+
+```{r}
+# Se crea una curva de Kaplan-Meier
+
+b_o$art_grupo_ultimo <- gsub('0', 
+                             'Grupo tratamiento NNRTI', 
+                             b_o$art_grupo_ultimo)
+b_o$art_grupo_ultimo <- gsub('1', 
+                             'Grupo tratamiento IP', 
+                             b_o$art_grupo_ultimo)
+b_o$art_grupo_ultimo <- gsub('2', 
+                             'Grupo tratamiento ITRAN', 
+                             b_o$art_grupo_ultimo)
+b_o$art_grupo_ultimo <- gsub('3', 
+                             'Grupo tratamiento COMBINADO', 
+                             b_o$art_grupo_ultimo)
+
+datos_superviv <- Surv(b_o$supvi_dias, b_o$death_y)
+
+octavo_modelo <- survfit(datos_superviv ~ b_o$art_grupo_ultimo, 
+                          type = "kaplan-meier", 
+                          conf.type = "log-log",
+                          data = b_o)
+
+autoplot(octavo_modelo,
+         surv.linetype = 'dashed', 
+         conf.int = TRUE,
+         conf.int.linetype = "none",
+         conf.int.alpha = 0.2,
+         censor = FALSE,
+         censor.size = 2.8,
+         censor.alpha = 0.8,
+         censor.shape = "*") +
+  labs(x = "\n Tiempo de supervivencia (días)", 
+       y = "Probabilidades de supervivencia S(t) \n", 
+       title = "Tiempos de supervivencia \n  
+       (Kaplan-Meier para tratamiento por tercer activo) \n") + 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.title.x = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        axis.title.y = element_text(face = "bold", 
+                                    colour = "#FF7A33", 
+                                    size = 12),
+        legend.title = element_text(face = "bold",
+                                    size = 10))
+```

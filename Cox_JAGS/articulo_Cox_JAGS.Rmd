@@ -61,7 +61,7 @@ data(larynx) #importamos marco de datos larynx
 time <- larynx$time #definfimos un vector con las observaciónes de la variable "time"
 
 #cargamos la base larynx(sin la columna de obs de las censuras) con one-hot-enconding 
-feat_DB <- read_csv("../Cox_JAGS/larynx_hot_enc.csv", show_col_types = FALSE)
+feat_DB <- read.csv(file="../Cox_JAGS/larynx_hot_enc.csv")
 
 #convertimos a matriz y quitamos la primera columna (las obs del tiempo
 #de supervivencia)
@@ -76,7 +76,6 @@ observación i del tiempo de supervivencia cae en el k-ésimo intervalo. Usamos 
 ```{r}
 time <- larynx$time #definfimos un vector con las observaciónes de la variable "time"
 K <- 3 #número de intervalo que escogemos 
-X <- larynx #marco de datos 
 a <- seq(0, max(larynx$time) + 0.001, length.out = K + 1) #vector de tiempos de censura 
 int.obs <- matrix(data = NA, nrow = nrow(larynx), ncol = length(a) - 1)
 D <- matrix(data = NA, nrow = nrow(larynx), ncol = length(a) - 1) 
@@ -107,12 +106,18 @@ param.jags <-c("beta", "lambda")  #paramteros a monitorear
 Sean $\pmb{\beta} = (\beta_1, \ldots, \beta_n), \ \pmb{x} = (x, \ldots, x_n)$. El modelo de regresión de Cox semiparamétrico considera que:
 
 \begin{itemize}
-\item $h(t_i|\theta) = \displaystyle (\sum^{K}_{m=1} \lambda_m I_{(a_{m-1},a_m ]}(t_i)) \ e^{\pmb{\beta}^T\pmb{x}}$
+\item El riesgo base tiene 
+\\
+\item $h(t_i|\theta) \propto  \displaystyle (\sum^{K}_{m=1} \lambda_m I_{(a_{m-1},a_m ]}(t_i)) \ e^{\pmb{\beta}^T\pmb{x}}$
 \\
 \item $L(\theta|\pmb{x}) = \displaystyle \prod_{m}  h(t_i|\theta)^{\delta_m} \ S(t_i |\theta)$
 \end{itemize}
 
-De la primera relación se sigue que $a$
+De la primera relación se sigue que $\Lambda(t_i|\theta) = \displaystyle e^{\pmb{\beta}^T\pmb{x}} \int^{t_i}_{0}\sum^{K}_{m=1} \lambda_m I_{(a_{m-1},a_m ]}(t_i) \ dt$. Por otro lado, consideremos la regla de asoción 
+
+Sea $\left \{    1,\ldots K   \right \}\ni m_i  = \# \text{ de intervalo en el cae } t_i$. Claramente la expresión para el riego base de puede simplificar en: 
+
+
 
 La siguinte cadena de caracteres nos muestra el contenido del archivo .txt con la descripción del modelo. Analicemos este pedazo de código:
 

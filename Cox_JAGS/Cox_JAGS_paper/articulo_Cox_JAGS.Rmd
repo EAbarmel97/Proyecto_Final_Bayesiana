@@ -61,7 +61,7 @@ data(larynx) #importamos marco de datos larynx
 time <- larynx$time #definfimos un vector con las observaciónes de la variable "time"
 
 #cargamos la base larynx(sin la columna de obs de las censuras) con one-hot-enconding 
-feat_DB <- read.csv(file="../Cox_JAGS/larynx_hot_enc.csv")
+feat_DB <- read.csv(file="../Cox_JAGS_paper/larynx_hot_enc.csv")
 
 #convertimos a matriz y quitamos la primera columna (las obs del tiempo
 #de supervivencia)
@@ -76,7 +76,6 @@ observación i del tiempo de supervivencia cae en el k-ésimo intervalo. Usamos 
 ```{r}
 time <- larynx$time #definfimos un vector con las observaciónes de la variable "time"
 K <- 3 #número de intervalo que escogemos 
-X <- larynx #marco de datos 
 a <- seq(0, max(larynx$time) + 0.001, length.out = K + 1) #vector de tiempos de censura 
 int.obs <- matrix(data = NA, nrow = nrow(larynx), ncol = length(a) - 1)
 D <- matrix(data = NA, nrow = nrow(larynx), ncol = length(a) - 1) 

@@ -23,7 +23,7 @@ int.obs <- matrix(data = NA, nrow = nrow(X), ncol = length(a) - 1)
 D <- matrix(data = NA, nrow = nrow(X), ncol = length(a) - 1) 
 for(i in 1:nrow(X)){
   for (k in 1:(length(a) - 1)){
-    D[i, k] <- ifelse(time[i] - a[k] > 0, 1, 0) * ifelse(a[k + 1] - time[i] > 0, 1, 0)#indicadora del intervalo
+    D[i, k] <- ifelse(time[i] - a[k] > 0, 1, 0) * ifelse(a[k + 1] - time[i] >= 0, 1, 0)#indicadora del intervalo
     int.obs[i, k] <- D[i, k] * k #indica en que intervalo cae la observación. 
   }
 }
@@ -36,11 +36,14 @@ data.jags <- list(n = nrow(X), m=length(a)-1, a = a,
                   int.obs=int.obs, Nbetas=ncol(X), zeros=rep(0,nrow(X)))
 
 #Función para inicializar el modelo 
-init.jags <- function(){list(beta = rnorm(ncol(X)), lambda =runif(34,0.1))}
+init.jags <- function(){list(beta = rnorm(ncol(X)), lambda = runif(34,0.1))}
 
 #Parámetros que vamos a monitorear   
-param.jags <-c("beta", "lambda")  #paramteros a monitorear 
+param.jags <- c("beta", "lambda")  #paramteros a monitorear 
 
+############Compilamos el modelo 
+Modelo_compilado <- jags.model(data = data.jags, file = "/Users/enki/Documents/Modelo_Cox_Bayesiano/Cox_JAGS/Cox_JAGS_VIH/m_VIH.txt", 
+                               inits = init.jags, n.chains = 3)
 
 
 

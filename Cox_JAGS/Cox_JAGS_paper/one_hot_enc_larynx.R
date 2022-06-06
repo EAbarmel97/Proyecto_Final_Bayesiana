@@ -9,16 +9,14 @@ dummy <- rep(NA,nrow(larynx))
 X1 <- as.data.frame(dummy)
 
 #hacemos one-hot-encoding 
-X1$time <- larynx$time
+X1$time <- larynx$time 
 
-X1$stage1 <- ifelse(larynx$stage == 1,1,0)  
-  
-X1$stage2 <- ifelse(larynx$stage == 2,1,0) 
+dummy_colnames <- c("stage1","stage2","stage","stage4")
 
-X1$stage3 <- ifelse(larynx$stage == 3,1,0) 
+for(i in 1:4){
+  X1[dummy_colnames[i]] <- ifelse(larynx$stage == i,1,0)
+}
 
-X1$stage4 <- ifelse(larynx$stage == 4,1,0) 
-  
 X1$Age <-larynx$age
   
 X1$Diagr <- larynx$diagyr 

@@ -17,8 +17,11 @@ DF_VIH<- DF_VIH %>%  group_by(pais) %>% sample_frac(0.3)
 
 count(DF_VIH, pais)
 
-# Matriz diseño 
+#Matriz diseño 
 X <- DF_VIH %>% select(male, mode_Bisexual:art_grupo_primer_3)
+
+# Eliminamos la columna pais para poder usar la matriz diseño 
+X <- X[,-1]
 
 # Tiempos de supervivencia 
 time = DF_VIH$supvi_dias
@@ -72,7 +75,7 @@ for(i in 1:34){
 }
 
 #asignación segun los componentes de results 
-for(i in 1:64){
+for(i in 1:68){
   if(i <= 34){
     assign(beta_names[i], results[,i]) # los primeros 34 son los coefs de regresión 
   }else{

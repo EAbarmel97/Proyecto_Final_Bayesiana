@@ -86,9 +86,9 @@ for(i in 1:13){
 #asignación segun los componentes de results 
 for(i in 1:26){
   if(i <= 13){
-    assign(beta_names[i], results[,i]) # los primeros 34 son los coefs de regresión 
+    assign(beta_names[i], results[,i]) # los primeros 13 son los coefs de regresión 
   }else{
-    assign(lambda_names[i], results[,i]) #los últimos 34 son los parámetros de la fun 
+    assign(lambda_names[i], results[,i]) #los últimos 13 son los parámetros de la fun 
     #de riesgo base
   }
 }
@@ -100,7 +100,7 @@ traceplot(results)
 #Info sobre las dist posteriores
 summary(results)
 
-#test de gelaman 
+#test de gelman
 gelman.diag(res)
 
 

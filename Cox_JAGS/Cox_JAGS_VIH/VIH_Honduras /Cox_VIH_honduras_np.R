@@ -5,6 +5,9 @@ library(magrittr)
 library(readr)
 library(fastDummies)
 
+#insertamos semilla para poder reproducir los resultados 
+set.seed(8)
+
 #Conjunto original
 VIH_HON <- read.csv(file.choose())
 
@@ -21,7 +24,7 @@ df_sin <- VIH_HON %>% select(male,age, rna_v, cd4_v)
 #df_con <- dummy_cols(df_sin, select_columns = "art_grupo_ultimo", remove_selected_columns = TRUE)
 
 #Matriz diseño 
-X <- df_con
+X <- df_sin
 
 ######################## JAGS ##################################
 
@@ -38,8 +41,11 @@ for(i in 1:nrow(X)){
 
 int.obs <- rowSums(int.obs) #vector que nos indica en que intervalo cae cada observación
 
+#medias paras las priors 
+mf <- c(0.442,0.03428,-0.000006402, -0.006125)
+
 #Datos con los cuales vamos a entrenar el modelo
-data.jags <- list(n = nrow(X), m=length(a)-1, a = a, 
+data.jags <- list(n = nrow(X), m=length(a)-1, a = a, mf = mf, 
                   delta=delta, time=time, X=X, 
                   int.obs=int.obs, Nbetas=ncol(X), zeros = rep(0,nrow(X)))
 
@@ -54,7 +60,7 @@ Modelo_compilado <- jags.model(data = data.jags, file = file.choose(), n.chains 
 
 #Mandamos llamar coda para tomar muestras para dist a posteriori 
 update(Modelo_compilado, 5000)
-res <- coda.samples(Modelo_compilado,variable.names=param.jags,n.iter=50000, n.thin=3)
+res <- coda.samples(Modelo_compilado,variable.names=param.jags,n.iter=40000, n.thin=1)
 
 #Unimos las 3 cadenas MCMC para hacer inferencia sobre los resultados de la simulación de 
 #las dist posteriores 
@@ -63,14 +69,14 @@ results <- as.mcmc(do.call(rbind,res))
 #Asiganamos a las entradas de results a beta y lambda 
 lambda_names <- c()#vector para los hiperparams lambda 
 beta_names <- c()#vector para los hiperparams beta 
-for(i in 1:7){
+for(i in 1:4){
   beta_names[i] = paste("beta",as.character(i), sep="")
   lambda_names[i] = paste("lambda",as.character(i), sep="")
 }
 
 #asignación segun los componentes de results 
-for(i in 1:14){
-  if(i <= 7){
+for(i in 1:8){
+  if(i <= 4){
     assign(beta_names[i], results[,i]) # los primeros 34 son los coefs de regresión 
   }else{
     assign(lambda_names[i], results[,i]) #los últimos 34 son los parámetros de la fun 
@@ -84,9 +90,4 @@ traceplot(results)
 
 #Info sobre las dist posteriores
 summary(results)
-
-#Test de Gelman
-gelman.plot(res)
-
-
 

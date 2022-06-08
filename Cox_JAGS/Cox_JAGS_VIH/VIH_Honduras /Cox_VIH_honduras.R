@@ -4,6 +4,11 @@ library(coda)
 library(magrittr)
 library(readr)
 library(fastDummies)
+#Función para contar el tiempo de ejecucción
+sleep_time <- function(){Sys.sleep(60)}
+
+#Semilla aleatorea 
+set.seed(8)
 
 #Conjunto original
 VIH_HON <- read.csv(file.choose())
@@ -54,7 +59,7 @@ Modelo_compilado <- jags.model(data = data.jags, file = file.choose(), n.chains 
 
 #Mandamos llamar coda para tomar muestras para dist a posteriori 
 update(Modelo_compilado, 5000)
-res <- coda.samples(Modelo_compilado,variable.names=param.jags,n.iter=10000, n.thin=1)
+res <- coda.samples(Modelo_compilado,variable.names=param.jags,n.iter=50000, n.thin=3)
 
 #Unimos las 3 cadenas MCMC para hacer inferencia sobre los resultados de la simulación de 
 #las dist posteriores 
@@ -71,17 +76,20 @@ for(i in 1:7){
 #asignación segun los componentes de results 
 for(i in 1:14){
   if(i <= 7){
-    assign(beta_names[i], results[,i]) # los primeros 34 son los coefs de regresión 
+    assign(beta_names[i], results[,i]) # los primeros 7 son los coefs de regresión 
   }else{
-    assign(lambda_names[i], results[,i]) #los últimos 34 son los parámetros de la fun 
+    assign(lambda_names[i], results[,i]) #los últimos 7 son los parámetros de la fun 
     #de riesgo base
   }
 }
 
 #Trazas 
-par(mfrow=c(4,4))
+par(mfrow=c(1,5))
 traceplot(results)
 
 #Info sobre las dist posteriores
 summary(results)
+
+#Test de Gelman
+gelman.plot(res)
 

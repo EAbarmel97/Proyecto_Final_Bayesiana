@@ -25,7 +25,7 @@ model{
   #priors lambda y beta
   
   for(l in 1:Nbetas){
-  beta[l] ~ dnorm(mf[l],0.001)
+  beta[l] ~ dnorm(mf[l],0.01)
   }
   for(r in 1:m){lambda[r] ~ dgamma(0.01,0.01)}
 }

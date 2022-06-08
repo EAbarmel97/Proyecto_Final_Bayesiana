@@ -1,0 +1,29 @@
+Los niveles que conservamos en el modelo de Cox frecuentista son: 
+
+factor(b_o$male)1                                       
+b_o$modeGeneric Sexual                                  
+b_o$modeHemophiliac                                     
+b_o$modeHeterosexual contact                             
+b_o$modeHeterosexual contact and Injecting drug user  
+b_o$modeHomo/Bisexual and Injecting drug user            
+b_o$modeHomosexual contact                               
+b_o$modeInjecting drug user                               
+b_o$modeOther (specify in mode_oth)                    
+b_o$modePerinatal                                        
+b_o$modeTransfusion nonhemophilia related                 
+b_o$modeUnknown                                        
+b_o$sitebrazil                                     
+b_o$sitechile                                         
+b_o$sitehonduras                                      
+b_o$sitemexico                                        
+b_o$siteperu                                         
+b_o$Edad_grupos25 - 44 años                           
+b_o$Edad_grupos45 - 59 años                           
+b_o$Edad_grupos60 años o más                          
+b_o$rna_gruposCV baja                                   
+b_o$rna_gruposCV indetectable                          
+b_o$rna_gruposCV media                                   
+b_o$cd4_gruposCD4 inicial > 350                      
+b_o$cd4_gruposCD4 inicial 200 - 350                  
+b_o$art_grupo_primer                                 
+b_o$art_grupo_ultimo

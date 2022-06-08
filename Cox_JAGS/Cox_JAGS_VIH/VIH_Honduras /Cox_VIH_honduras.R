@@ -5,60 +5,26 @@ library(magrittr)
 library(readr)
 library(fastDummies)
 
-# #Cargamos la base ya con las variables mudas incorporadas
-# DF_VIH <- read.csv(choose.files())
-# nrow(DF_VIH)
-# 
-# #Dado que son demasiadas observaciones tomamos una muestra de 30%
-# #DF_VIH <- DF_VIH %>% sample_frac(0.30)
-# DF_VIH = DF_VIH %>% filter(site_mexico == 1)
-# 
-# #creamos una variable llamada pais
-# #DF_VIH$pais <- substr(DF_VIH$patient,1,2)
-# 
-# # IMPORTANTE: BORRAR VARIABLES NO SIGNIFICATIVAS SEGUN COX FRECUENTISTA
-# 
-# 
-# #agrupamos por pais y tomamos muestra de un 
-# set.seed(89)
-# DF_VIH<- DF_VIH  %>% sample_frac(0.1)
-# 
-# count(DF_VIH, pais)
-# 
-# #Borrar la variable auxiliar pais
-# DF_VIH$pais = NULL  
-# 
-# 
-# 
-# # Matriz diseño 
-# X <- DF_VIH %>% select(male, mode_Bisexual:mode_Unknown, Edad_grupos_18...24.aÃ.os:art_grupo_primer_3)
-# 
-# # Tiempos de supervivencia 
-# time = DF_VIH$supvi_dias
-# 
-# # Censura/falla
-# delta = DF_VIH$death_y
+#Conjunto original
+VIH_HON <- read.csv(file.choose())
 
-# COnjunto original
-df = readr::read_csv(file.choose())
+#Tiempos de supervivencia 
+time <- VIH_HON$supvi_dias
 
-# Tiempos de supervivencia 
-time = df$supvi_dias
+#Censura/falla
+delta <- VIH_HON$death_y
 
-# Censura/falla
-delta = df$death_y
+#Matrix sin variables mudas 
+df_sin <- VIH_HON %>% select(male,age, rna_v, cd4_v, art_grupo_ultimo)
 
-# Matrix sin dummies 
-df_sin = df %>% select(male,age, rna_v, cd4_v, art_grupo_ultimo)
-
-# Dummies para art_grupo_ultimo
+#Dummies para art_grupo_ultimo
 df_con <- dummy_cols(df_sin, select_columns = "art_grupo_ultimo", remove_selected_columns = TRUE)
 
-
-# Matriz diseño 
+#Matriz diseño 
 X <- df_con
 
-######################## JAGS ###################################
+######################## JAGS ##################################
+
 K <- length(colnames(X)) #número de intervalo que escogemos 
 a <- seq(min(time), max(time) + 0.01, length.out = K + 1) #vector de tiempos de censura 
 int.obs <- matrix(data = NA, nrow = nrow(X), ncol = length(a) - 1)
@@ -78,18 +44,17 @@ data.jags <- list(n = nrow(X), m=length(a)-1, a = a,
                   int.obs=int.obs, Nbetas=ncol(X), zeros = rep(0,nrow(X)))
 
 #Función para inicializar el modelo 
-init.jags <- function(){list(beta = rnorm(ncol(X)), lambda = runif(7,0.1))}
+#init.jags <- function(){list(beta = rnorm(ncol(X)), lambda = runif(7,0.1))}
 
 #Parámetros que vamos a monitorear   
 param.jags <- c("beta", "lambda")  #paramteros a monitorear 
 
 ############Compilamos el modelo 
-Modelo_compilado <- jags.model(data = data.jags, file = file.choose(), 
-                               inits = init.jags, n.chains = 3)
+Modelo_compilado <- jags.model(data = data.jags, file = file.choose(), n.chains = 3)
 
 #Mandamos llamar coda para tomar muestras para dist a posteriori 
 update(Modelo_compilado, 5000)
-res <- coda.samples(Modelo_compilado,variable.names=param.jags,n.iter=9000, n.thin=1)
+res <- coda.samples(Modelo_compilado,variable.names=param.jags,n.iter=10000, n.thin=1)
 
 #Unimos las 3 cadenas MCMC para hacer inferencia sobre los resultados de la simulación de 
 #las dist posteriores 

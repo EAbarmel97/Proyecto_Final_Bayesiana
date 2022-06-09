@@ -111,7 +111,14 @@ Sean $\pmb{\beta} = (\beta_1, \ldots, \beta_n), \ \pmb{x} = (x, \ldots, x_n)$. E
 \item $L(\theta|\pmb{x}) = \displaystyle \prod_{m}  h(t_i|\theta)^{\delta_m} \ S(t_i |\theta)$
 \end{itemize}
 
-De la primera relación se sigue que $\Lambda(t_i|\theta) = \displaystyle e^{\pmb{\beta}^T\pmb{x}} \int^{t_i}_{0}\sum^{K}_{m=1} \lambda_m I_{(a_{m-1},a_m ]}(t_i) \ dt$
+De la primera relación se sigue que $\Lambda(t_i|\theta) = \displaystyle e^{\pmb{\beta}^T\pmb{x}} \int^{t_i}_{0}\sum^{K}_{m=1} \lambda_m I_{(a_{m-1},a_m ]}(u) \ du = \displaystyle e^{\pmb{\beta}^T\pmb{x}}\sum^{K}_{m=1} \lambda_m\int^{t_i}_{0}I_{(a_{m-1},a_m ]}(u) \ du $. 
+
+Por otro lado, sea $ \left \{     1, \ldots , K    \right \} \ni m_i = \# \text{  de intervalo } I_k \text{ tal que } t_i \in I_{m_i}$ entonces es claro que la expresión para el riesgo base se puede expresar de la forma: 
+
+$\begin{aligned}
+\Lambda(t_i|\theta) = \displaystyle e^{\pmb{\beta}^T\pmb{x}}\sum^{m_i}_{m=1} \lambda_m\int^{t_i}_{0}I_{(a_{m-1},a_m ]}(u) \ du \\
+\end{aligned}$
+
 
 La siguinte cadena de caracteres nos muestra el contenido del archivo .txt con la descripción del modelo. Analicemos este pedazo de código:
 
